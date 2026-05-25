@@ -3,3 +3,6 @@ node_modules/
 *.log
 __pycache__/
 *.pyc
+workspace-dashboard/.next/
+workspace-api/workspace-api
+workspace-dashboard/package-lock.json
