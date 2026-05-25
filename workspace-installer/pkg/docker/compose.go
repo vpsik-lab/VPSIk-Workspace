@@ -252,7 +252,7 @@ type composeService struct {
 }
 
 type composeFile struct {
-	Version  string                    `yaml:"version"`
+	Version  string                    `yaml:"version,omitempty"`
 	Networks map[string]networkDef     `yaml:"networks"`
 	Volumes  map[string]map[string]interface{} `yaml:"volumes"`
 	Services map[string]composeService `yaml:"services"`
@@ -334,8 +334,12 @@ func GenerateComposeFile(services []string, network string, domain string, outpu
 			if vol == "" {
 				continue
 			}
-			if vol[0] != '/' && !strings.Contains(vol, ":") {
-				volumes[vol] = true
+			vname := vol
+			if idx := strings.IndexByte(vol, ':'); idx >= 0 {
+				vname = vol[:idx]
+			}
+			if vname != "" && vname[0] != '/' && vname[0] != '.' && vname[0] != '~' {
+				volumes[vname] = true
 			}
 		}
 	}
@@ -351,7 +355,6 @@ func GenerateComposeFile(services []string, network string, domain string, outpu
 	}
 
 	compose := composeFile{
-		Version: "3.8",
 		Networks: map[string]networkDef{
 			network: {Name: network, External: false},
 		},
