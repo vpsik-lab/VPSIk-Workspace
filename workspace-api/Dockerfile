@@ -1,6 +1,6 @@
 FROM golang:1.22-alpine AS builder
 WORKDIR /src
-RUN apk add --no-cache ca-certificates git
+RUN apk add --no-cache ca-certificates
 COPY go.mod go.sum ./
 RUN GOPROXY=https://proxy.golang.org,direct go mod download
 COPY . .
