@@ -29,6 +29,7 @@ type ServiceCompose struct {
 	DependsOn   []string
 	Replicas    int
 	ExtraLabels map[string]string
+	Command     []string
 }
 
 var ServiceTemplates = map[string]*ServiceCompose{
@@ -246,15 +247,11 @@ var ServiceTemplates = map[string]*ServiceCompose{
 		Image:       "vpsik-api:latest",
 		Expose:      []string{"8081"},
 		Ports:       []string{"8081:8081"},
+		Volumes:     []string{"/opt/workspace/api.yaml:/etc/vpsik/api.yaml:ro"},
 		Network:     "workspace_net",
 		TraefikHost: "api.${VPSIK_DOMAIN}",
 		TraefikPort: "8081",
-		EnvVars: map[string]string{
-			"VPSIK_DOMAIN":    "${VPSIK_DOMAIN}",
-			"SESSION_SECRET":  "${SESSION_SECRET}",
-			"AUTH_USERNAME":   "${AUTH_USERNAME:-admin}",
-			"AUTH_PASSWORD":   "${AUTH_PASSWORD:-admin}",
-		},
+		Command:     []string{"/etc/vpsik/api.yaml"},
 	},
 	"cloudflare": {
 		Name:  "cloudflared",
@@ -280,6 +277,7 @@ type composeService struct {
 	Labels      map[string]string `yaml:"labels,omitempty"`
 	Networks    []string          `yaml:"networks,omitempty"`
 	DependsOn   []string          `yaml:"depends_on,omitempty"`
+	Command     []string          `yaml:"command,omitempty"`
 }
 
 type composeFile struct {
@@ -354,6 +352,7 @@ func GenerateComposeFile(services []string, network string, domain string, outpu
 			Environment:   svc.EnvVars,
 			Networks:      []string{network},
 			DependsOn:     deps,
+			Command:       svc.Command,
 		}
 
 		labels := GenerateTraefikLabels(&svc)
@@ -488,6 +487,83 @@ func GenerateEnvFile(services []string, domain string, outputPath string) error 
 	}
 
 	return os.WriteFile(outputPath, []byte(content), 0644)
+}
+
+func GenerateAPIConfig(services []string, domain string, outputPath string) error {
+	jwtSecret := randomHex(64)
+	// bcrypt hash for "admin"
+	adminHash := "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy"
+
+	type apiUser struct {
+		Username     string `yaml:"username"`
+		PasswordHash string `yaml:"password_hash"`
+	}
+
+	type apiAuth struct {
+		JWTSecret string    `yaml:"jwt_secret"`
+		Users     []apiUser `yaml:"users"`
+	}
+
+	type svcEndpoint struct {
+		URL   string `yaml:"url"`
+		Token string `yaml:"token,omitempty"`
+	}
+
+	type resticCfg struct {
+		Binary   string `yaml:"binary"`
+		RepoURL  string `yaml:"repo_url"`
+		Password string `yaml:"password"`
+	}
+
+	type apiServices struct {
+		Gitea      svcEndpoint `yaml:"gitea"`
+		Coolify    svcEndpoint `yaml:"coolify"`
+		Ollama     svcEndpoint `yaml:"ollama"`
+		OpenCode   svcEndpoint `yaml:"opencode"`
+		Restic     resticCfg   `yaml:"restic"`
+		CodeServer svcEndpoint `yaml:"code-server"`
+		Plane      svcEndpoint `yaml:"plane,omitempty"`
+		Outline    svcEndpoint `yaml:"outline,omitempty"`
+		Mattermost svcEndpoint `yaml:"mattermost,omitempty"`
+	}
+
+	svcs := apiServices{
+		Gitea:      svcEndpoint{URL: "http://gitea:3000"},
+		Coolify:    svcEndpoint{URL: "http://coolify:3000"},
+		Ollama:     svcEndpoint{URL: "http://ollama:11434"},
+		OpenCode:   svcEndpoint{URL: "", Token: ""},
+		Restic:     resticCfg{Binary: "restic", RepoURL: "/data/restic", Password: ""},
+		CodeServer: svcEndpoint{URL: "http://codeserver:8443"},
+	}
+
+	cfg := struct {
+		Server   map[string]interface{} `yaml:"server"`
+		Auth     apiAuth                `yaml:"auth"`
+		Services apiServices            `yaml:"services"`
+	}{
+		Server: map[string]interface{}{
+			"port": 8081,
+			"host": "0.0.0.0",
+		},
+		Auth: apiAuth{
+			JWTSecret: jwtSecret,
+			Users: []apiUser{
+				{Username: "admin", PasswordHash: adminHash},
+			},
+		},
+		Services: svcs,
+	}
+
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return fmt.Errorf("marshal api config: %w", err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+		return fmt.Errorf("create output dir: %w", err)
+	}
+
+	return os.WriteFile(outputPath, data, 0644)
 }
 
 func Deploy(composePath string) error {
