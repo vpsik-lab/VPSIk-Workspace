@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -75,7 +76,7 @@ func runAutoInit() error {
 		outputPath = configPath
 	}
 
-	if err := os.MkdirAll(strings.TrimSuffix(outputPath, "/"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
 		if !os.IsExist(err) {
 			return fmt.Errorf("create output dir: %w", err)
 		}
@@ -168,6 +169,10 @@ func runInteractiveInit() error {
 			fmt.Println("Init cancelled.")
 			return nil
 		}
+	}
+
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+		return fmt.Errorf("create output dir: %w", err)
 	}
 
 	if err := os.WriteFile(outputPath, data, 0644); err != nil {
