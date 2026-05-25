@@ -1,4 +1,11 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'
+function getApiBase(): string {
+  if (typeof window !== 'undefined') {
+    return `http://${window.location.hostname}:8081`
+  }
+  return 'http://localhost:8081'
+}
+
+export const API_BASE = getApiBase()
 
 export interface ServiceStatus {
   name: string

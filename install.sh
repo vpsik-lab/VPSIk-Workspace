@@ -207,24 +207,36 @@ else
   info "Would run: vpsik install --yes"
 fi
 
+# ── Detect IP ─────────────────────────────────────────────
+
+VPS_IP=""
+if command -v curl &>/dev/null; then
+  VPS_IP=$(curl -s -4 --max-time 5 ifconfig.me 2>/dev/null || true)
+fi
+if [ -z "$VPS_IP" ] && command -v hostname &>/dev/null; then
+  VPS_IP=$(hostname -I | awk '{print $1}')
+fi
+if [ -z "$VPS_IP" ]; then
+  VPS_IP="<VPS_IP>"
+fi
+
 # ── Summary ────────────────────────────────────────────────
 
 echo ""
 echo -e "${BLUE}╔════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║    Installation Complete! 🎉              ║${NC}"
+echo -e "${BLUE}║    Installation Complete! 🎉               ║${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════════╝${NC}"
 echo ""
-
-DOMAIN="${DOMAIN:-workspace.vpsik.com}"
-
-echo "  Dashboard:   https://$DOMAIN"
-echo "  API:         https://api.$DOMAIN"
-echo "  Gitea:       https://git.$DOMAIN"
-echo "  Ollama:      https://ollama.$DOMAIN"
-echo "  OpenWebUI:   https://chat.$DOMAIN"
-echo "  Code Server: https://code.$DOMAIN"
-echo "  Metrics:     https://metrics.$DOMAIN"
+echo "  ── Access ──"
+echo "  Dashboard:   http://$VPS_IP:3000"
+echo "  API:         http://$VPS_IP:8081"
+echo "  Code Server: http://$VPS_IP:8443"
 echo ""
+echo "  ── Login ──"
+echo "  Username: admin"
+echo "  Password: admin"
+echo ""
+echo "  ── Paths ──"
 echo "  Config:      $INSTALL_DIR/workspace.yaml"
 echo "  Data:        $INSTALL_DIR/data/"
 echo "  Backups:     $INSTALL_DIR/backups/"

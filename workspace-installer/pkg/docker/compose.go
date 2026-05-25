@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
 )
 
@@ -238,9 +239,6 @@ var ServiceTemplates = map[string]*ServiceCompose{
 		TraefikHost: "${VPSIK_DOMAIN}",
 		TraefikPort: "3000",
 		DependsOn:   []string{"api"},
-		EnvVars: map[string]string{
-			"NEXT_PUBLIC_API_URL": "http://localhost:8081",
-		},
 	},
 	"api": {
 		Name:        "api",
@@ -489,10 +487,13 @@ func GenerateEnvFile(services []string, domain string, outputPath string) error 
 	return os.WriteFile(outputPath, []byte(content), 0644)
 }
 
-func GenerateAPIConfig(services []string, domain string, outputPath string) error {
+func GenerateAPIConfig(services []string, domain string, outputPath string) (string, error) {
 	jwtSecret := randomHex(64)
-	// bcrypt hash for "admin"
-	adminHash := "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy"
+	adminPassword := randomString(16)
+	adminHash, err := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return "", fmt.Errorf("hash password: %w", err)
+	}
 
 	type apiUser struct {
 		Username     string `yaml:"username"`
@@ -548,7 +549,7 @@ func GenerateAPIConfig(services []string, domain string, outputPath string) erro
 		Auth: apiAuth{
 			JWTSecret: jwtSecret,
 			Users: []apiUser{
-				{Username: "admin", PasswordHash: adminHash},
+				{Username: "admin", PasswordHash: string(adminHash)},
 			},
 		},
 		Services: svcs,
@@ -556,14 +557,18 @@ func GenerateAPIConfig(services []string, domain string, outputPath string) erro
 
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
-		return fmt.Errorf("marshal api config: %w", err)
+		return "", fmt.Errorf("marshal api config: %w", err)
 	}
 
 	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
-		return fmt.Errorf("create output dir: %w", err)
+		return "", fmt.Errorf("create output dir: %w", err)
 	}
 
-	return os.WriteFile(outputPath, data, 0644)
+	if err := os.WriteFile(outputPath, data, 0644); err != nil {
+		return "", fmt.Errorf("write api config: %w", err)
+	}
+
+	return adminPassword, nil
 }
 
 func Deploy(composePath string) error {
