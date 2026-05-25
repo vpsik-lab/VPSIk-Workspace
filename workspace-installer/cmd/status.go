@@ -38,7 +38,7 @@ var statusCmd = &cobra.Command{
 
 		for _, s := range svcState.Services {
 			icon := "❌"
-			if s.Status.String() == "installed" {
+			if s.Status == detector.StatusInstalled {
 				icon = "✅"
 			}
 			fmt.Printf("  %s %s: %s\n", icon, s.Name, s.Details)

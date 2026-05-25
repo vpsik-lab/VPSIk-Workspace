@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'
 
 export interface ServiceStatus {
   name: string
@@ -29,19 +29,12 @@ export interface OllamaModel {
   modified_at: string
 }
 
-export interface CoolifyServer {
-  id: number
-  name: string
-  ip: string
-  status: string
-}
-
 function getToken(): string | null {
   if (typeof window === 'undefined') return null
   return localStorage.getItem('vpsik_token')
 }
 
-function authHeaders(): Record<string, string> {
+export function authHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   }
@@ -100,14 +93,6 @@ export async function getGiteaRepos(): Promise<GiteaRepo[]> {
     headers: authHeaders(),
   })
   if (!res.ok) throw new Error('failed to fetch repos')
-  return res.json()
-}
-
-export async function getCoolifyServers(): Promise<CoolifyServer[]> {
-  const res = await fetch(`${API_BASE}/api/coolify/servers`, {
-    headers: authHeaders(),
-  })
-  if (!res.ok) throw new Error('failed to fetch servers')
   return res.json()
 }
 
@@ -195,17 +180,6 @@ export async function getOllamaModels(): Promise<OllamaModel[]> {
   })
   if (!res.ok) throw new Error('failed to fetch models')
   return res.json()
-}
-
-export async function chatOllama(model: string, messages: { role: string; content: string }[]): Promise<string> {
-  const res = await fetch(`${API_BASE}/api/ollama/chat`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify({ model, messages, stream: false }),
-  })
-  if (!res.ok) throw new Error('chat failed')
-  const data = await res.json()
-  return data.reply
 }
 
 export async function chatOllamaStream(

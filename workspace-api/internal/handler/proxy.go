@@ -372,6 +372,11 @@ func (h *ProxyHandler) OpenCodeChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.clients.OpenCode == nil {
+		jsonError(w, "opencode not configured", http.StatusBadGateway)
+		return
+	}
+
 	reply, err := h.clients.OpenCode.Chat(r.Context(), req.Message, req.Context, req.RepoPath)
 	if err != nil {
 		jsonError(w, err.Error(), http.StatusBadGateway)

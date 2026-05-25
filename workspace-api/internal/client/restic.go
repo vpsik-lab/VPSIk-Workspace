@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -45,17 +46,10 @@ func NewResticClient(binaryPath, repoURL, password string) *ResticClient {
 }
 
 func (c *ResticClient) env() []string {
-	return append([]string{
+	return append(os.Environ(),
 		fmt.Sprintf("RESTIC_REPOSITORY=%s", c.repoURL),
 		fmt.Sprintf("RESTIC_PASSWORD=%s", c.password),
-	}, osEnviron()...)
-}
-
-func osEnviron() []string {
-	return []string{
-		"PATH=" + "/usr/local/bin:/usr/bin:/bin",
-		"HOME=" + "/root",
-	}
+	)
 }
 
 func (c *ResticClient) run(ctx context.Context, args ...string) (string, error) {
@@ -76,21 +70,14 @@ func (c *ResticClient) CheckHealth(ctx context.Context) error {
 	return err
 }
 
-func (c *ResticClient) Init(ctx context.Context) error {
-	_, err := c.run(ctx, "init")
-	if err != nil && !strings.Contains(err.Error(), "already initialized") {
-		return err
-	}
-	return nil
-}
-
 func (c *ResticClient) Backup(ctx context.Context, paths []string, tags []string) (*ResticBackupStats, error) {
 	args := []string{"backup", "--json"}
-	for _, path := range paths {
-		args = append(args, path)
-	}
 	for _, tag := range tags {
 		args = append(args, "--tag", tag)
+	}
+	args = append(args, "--")
+	for _, path := range paths {
+		args = append(args, path)
 	}
 
 	out, err := c.run(ctx, args...)

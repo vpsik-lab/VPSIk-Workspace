@@ -1,7 +1,6 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
 import { verify, login as apiLogin, logout as apiLogout, getUser } from './api'
 
 interface AuthContextType {

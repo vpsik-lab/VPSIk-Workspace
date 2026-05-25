@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
+	"time"
 
 	"github.com/vpsik/workspace-api/internal/config"
 )
@@ -77,10 +77,13 @@ func TestStatusHandler_TimestampFormat(t *testing.T) {
 	h.Status(w, req)
 
 	var sr StatusResponse
-	json.NewDecoder(w.Result().Body).Decode(&sr)
+	resp := w.Result()
+	defer resp.Body.Close()
+	json.NewDecoder(resp.Body).Decode(&sr)
 
-	if !strings.Contains(sr.Timestamp, "T") || !strings.Contains(sr.Timestamp, "Z") {
-		t.Errorf("expected RFC3339 timestamp, got %s", sr.Timestamp)
+	_, err := time.Parse(time.RFC3339, sr.Timestamp)
+	if err != nil {
+		t.Errorf("expected RFC3339 timestamp, got %q: %v", sr.Timestamp, err)
 	}
 }
 

@@ -3,6 +3,7 @@ package plan
 import (
 	"fmt"
 
+	"github.com/vpsik/workspace-installer/pkg/detector"
 	"github.com/vpsik/workspace-installer/pkg/state"
 )
 
@@ -31,7 +32,7 @@ func Build(svcState *state.State, configServices []string) *Plan {
 		for _, s := range svcState.Services {
 			if s.Name == name {
 				found = true
-				if s.Status.String() == "installed" {
+				if s.Status == detector.StatusInstalled {
 					plan.Items = append(plan.Items, Item{
 						Service: name,
 						Action:  ActionSkip,

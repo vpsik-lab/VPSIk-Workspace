@@ -202,8 +202,12 @@ func GenerateComposeFile(services []string, domain string, outputPath string) er
 
 	for _, name := range services {
 		if tpl, ok := ServiceTemplates[name]; ok {
-			svc := *tpl
-			svc.EnvVars["VPSIK_DOMAIN"] = domain
+		svc := *tpl
+		svc.EnvVars = make(map[string]string, len(tpl.EnvVars))
+		for k, v := range tpl.EnvVars {
+			svc.EnvVars[k] = v
+		}
+		svc.EnvVars["VPSIK_DOMAIN"] = domain
 			svcDefs = append(svcDefs, &svc)
 			for _, vol := range tpl.Volumes {
 				if vol[0] != '/' {

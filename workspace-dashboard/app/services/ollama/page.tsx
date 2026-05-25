@@ -41,8 +41,8 @@ export default function OllamaPage() {
       await pullOllamaModel(pullName.trim())
       setPullName('')
       await loadModels()
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
     }
     setPulling(false)
   }
@@ -52,15 +52,20 @@ export default function OllamaPage() {
     try {
       await deleteOllamaModel(modelName)
       await loadModels()
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
     }
   }
 
   function formatSize(bytes: number): string {
-    if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`
-    if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(0)} MB`
-    return `${(bytes / 1e3).toFixed(0)} KB`
+    const units = ['B', 'KB', 'MB', 'GB']
+    let i = 0
+    let size = bytes
+    while (size >= 1024 && i < units.length - 1) {
+      size /= 1024
+      i++
+    }
+    return `${size.toFixed(i === 0 ? 0 : 1)} ${units[i]}`
   }
 
   return (

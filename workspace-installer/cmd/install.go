@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -65,8 +66,8 @@ var installCmd = &cobra.Command{
 
 		fmt.Print("\n⚠ Apply this plan? (yes/no): ")
 		reader := bufio.NewReader(os.Stdin)
-		response, _ := reader.ReadString('\n')
-		response = response[:len(response)-1]
+	response, _ := reader.ReadString('\n')
+	response = strings.TrimSpace(response)
 
 		if response != "yes" {
 			fmt.Println("Installation cancelled.")

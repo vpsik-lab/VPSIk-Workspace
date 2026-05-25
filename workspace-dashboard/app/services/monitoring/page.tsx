@@ -7,27 +7,10 @@ import ProtectedPage from '@/components/ProtectedPage'
 import { ListSkeleton } from '@/components/LoadingSkeleton'
 import { useAuth } from '@/lib/auth-context'
 import { getStatus, ServiceStatus } from '@/lib/api'
+import StatusBadge from '@/components/StatusBadge'
 
 const GRAFANA_URL = process.env.NEXT_PUBLIC_GRAFANA_URL || 'http://localhost:3002'
 const PROMETHEUS_URL = process.env.NEXT_PUBLIC_PROMETHEUS_URL || 'http://localhost:9090'
-
-function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    ok: 'bg-green-900/50 text-green-400',
-    healthy: 'bg-green-900/50 text-green-400',
-    running: 'bg-green-900/50 text-green-400',
-    error: 'bg-red-900/50 text-red-400',
-    down: 'bg-red-900/50 text-red-400',
-    degraded: 'bg-yellow-900/50 text-yellow-400',
-    unknown: 'bg-gray-800 text-gray-400',
-  }
-  const cls = colors[status?.toLowerCase()] || colors.unknown
-  return (
-    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}>
-      {status || 'unknown'}
-    </span>
-  )
-}
 
 export default function MonitoringPage() {
   const { user, authenticated, logout } = useAuth()

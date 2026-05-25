@@ -85,11 +85,10 @@ func main() {
 	h := middleware.CORS(middleware.Logging(mux))
 
 	server := &http.Server{
-		Addr:         addr,
-		Handler:      h,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 60 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		Addr:        addr,
+		Handler:     h,
+		ReadTimeout: 15 * time.Second,
+		IdleTimeout: 60 * time.Second,
 	}
 
 	go func() {

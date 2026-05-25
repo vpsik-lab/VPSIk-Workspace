@@ -45,6 +45,15 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamingContent])
 
+  useEffect(() => {
+    return () => {
+      if (abortRef.current) {
+        abortRef.current.abort()
+        abortRef.current = null
+      }
+    }
+  }, [])
+
   const handleSend = useCallback(async (content: string) => {
     if (!content.trim() || !selectedModel || sending) return
 
@@ -95,8 +104,8 @@ export default function ChatPage() {
     try {
       const reply = await runOllamaTask(selectedModel, taskId, input.trim())
       setMessages(prev => [...prev, { role: 'assistant', content: reply }])
-    } catch (err: any) {
-      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }])
+    } catch (err: unknown) {
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err instanceof Error ? err.message : String(err)}` }])
     }
     setSending(false)
   }

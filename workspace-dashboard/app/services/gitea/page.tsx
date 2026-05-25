@@ -6,7 +6,7 @@ import UserMenu from '@/components/UserMenu'
 import ProtectedPage from '@/components/ProtectedPage'
 import { ListSkeleton } from '@/components/LoadingSkeleton'
 import { useAuth } from '@/lib/auth-context'
-import { getGiteaRepos, GiteaRepo } from '@/lib/api'
+import { getGiteaRepos, GiteaRepo, API_BASE, authHeaders } from '@/lib/api'
 
 interface WebhookForm {
   repo: string
@@ -34,12 +34,9 @@ export default function GiteaPage() {
     e.preventDefault()
     setWebhookMsg('')
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/gitea/webhooks`, {
+      const res = await fetch(`${API_BASE}/api/gitea/webhooks`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('vpsik_token')}`,
-        },
+        headers: authHeaders(),
         body: JSON.stringify({
           repo: webhook.repo,
           url: webhook.url,
@@ -50,8 +47,8 @@ export default function GiteaPage() {
       if (!res.ok) throw new Error('webhook creation failed')
       setWebhookMsg('✅ Webhook created')
       setShowWebhook(false)
-    } catch (err: any) {
-      setWebhookMsg(`❌ ${err.message}`)
+    } catch (err: unknown) {
+      setWebhookMsg(`❌ ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 

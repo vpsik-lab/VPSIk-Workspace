@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Sidebar from '@/components/Sidebar'
 import UserMenu from '@/components/UserMenu'
 import ProtectedPage from '@/components/ProtectedPage'
@@ -30,11 +30,19 @@ export default function BackupPage() {
   const [restoreTarget, setRestoreTarget] = useState('/restore')
   const [forgetKeep, setForgetKeep] = useState(7)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function showMsg(type: 'success' | 'error', text: string) {
     setMessage({ type, text })
-    setTimeout(() => setMessage(null), 5000)
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => setMessage(null), 5000)
   }
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [])
 
   async function loadSnapshots() {
     try {

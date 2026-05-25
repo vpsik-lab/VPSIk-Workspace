@@ -151,7 +151,9 @@ func TestFindUser(t *testing.T) {
 func TestLoad_InvalidYAML(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "bad.yaml")
-	os.WriteFile(path, []byte("{invalid: yaml: broken"), 0644)
+	if err := os.WriteFile(path, []byte("{invalid: yaml: broken"), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	_, err := Load(path)
 	if err == nil {
@@ -162,7 +164,9 @@ func TestLoad_InvalidYAML(t *testing.T) {
 func TestLoad_EmptyFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "empty.yaml")
-	os.WriteFile(path, []byte(""), 0644)
+	if err := os.WriteFile(path, []byte(""), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	cfg, err := Load(path)
 	if err != nil {

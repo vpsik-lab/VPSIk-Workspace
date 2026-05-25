@@ -34,8 +34,8 @@ export default function OpenCodePage() {
     try {
       const result = await openCodeChat(input.trim(), context.trim())
       setReply(result)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
     }
     setLoading(false)
   }
