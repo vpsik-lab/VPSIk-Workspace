@@ -119,7 +119,7 @@ var installCmd = &cobra.Command{
 		}
 		composePath := filepath.Join(composeDir, "compose", "docker-compose.yml")
 
-		envPath := filepath.Join(composeDir, "compose", ".env")
+		envPath := filepath.Join(composeDir, ".env")
 		if err := docker.GenerateEnvFile(toInstall, cfg.Workspace.Domain, envPath); err != nil {
 			return fmt.Errorf("generate env: %w", err)
 		}

@@ -2,7 +2,9 @@ package docker
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -289,6 +291,10 @@ func GenerateTraefikLabels(svc *ServiceCompose) map[string]string {
 func GenerateComposeFile(services []string, network string, domain string, outputPath string) error {
 	volumes := make(map[string]bool)
 	svcMap := make(map[string]composeService)
+	svcSet := make(map[string]bool, len(services))
+	for _, s := range services {
+		svcSet[s] = true
+	}
 
 	for _, name := range services {
 		tpl, ok := ServiceTemplates[name]
@@ -302,6 +308,13 @@ func GenerateComposeFile(services []string, network string, domain string, outpu
 			svc.EnvVars[k] = v
 		}
 
+		var deps []string
+		for _, d := range svc.DependsOn {
+			if svcSet[d] {
+				deps = append(deps, d)
+			}
+		}
+
 		cf := composeService{
 			Image:         svc.Image,
 			ContainerName: svc.Name,
@@ -311,7 +324,7 @@ func GenerateComposeFile(services []string, network string, domain string, outpu
 			Volumes:       svc.Volumes,
 			Environment:   svc.EnvVars,
 			Networks:      []string{network},
-			DependsOn:     svc.DependsOn,
+			DependsOn:     deps,
 		}
 
 		labels := GenerateTraefikLabels(&svc)
@@ -374,6 +387,26 @@ func GenerateComposeFile(services []string, network string, domain string, outpu
 	return os.WriteFile(outputPath, data, 0644)
 }
 
+func randomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	result := make([]byte, length)
+	for i := range result {
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		result[i] = charset[n.Int64()]
+	}
+	return string(result)
+}
+
+func randomHex(length int) string {
+	const charset = "0123456789abcdef"
+	result := make([]byte, length)
+	for i := range result {
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		result[i] = charset[n.Int64()]
+	}
+	return string(result)
+}
+
 func GenerateEnvFile(services []string, domain string, outputPath string) error {
 	envVars := make(map[string]string)
 	envVars["VPSIK_DOMAIN"] = domain
@@ -385,7 +418,28 @@ func GenerateEnvFile(services []string, domain string, outputPath string) error 
 		}
 		for k, v := range tpl.EnvVars {
 			if _, exists := envVars[k]; !exists {
-				envVars[k] = v
+				if v == "" || (strings.HasPrefix(v, "${") && strings.HasSuffix(v, "}") && !strings.Contains(v, ":-")) {
+					switch k {
+					case "POSTGRES_PASSWORD":
+						envVars[k] = randomString(24)
+					case "REDIS_PASSWORD":
+						envVars[k] = randomString(24)
+					case "AUTHENTIK_SECRET_KEY":
+						envVars[k] = randomHex(64)
+					case "AUTHENTIK_BOOT_PASSWORD":
+						envVars[k] = randomString(24)
+					case "GRAFANA_PASSWORD":
+						envVars[k] = randomString(24)
+					case "CODESERVER_PASSWORD":
+						envVars[k] = randomString(24)
+					case "RESTIC_PASSWORD":
+						envVars[k] = randomString(24)
+					default:
+						envVars[k] = v
+					}
+				} else {
+					envVars[k] = v
+				}
 			}
 		}
 	}
