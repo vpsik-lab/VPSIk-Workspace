@@ -1,0 +1,10 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/chat/page": "app/chat/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js",
+  "/services/coolify/page": "app/services/coolify/page.js",
+  "/services/gitea/page": "app/services/gitea/page.js",
+  "/services/ollama/page": "app/services/ollama/page.js"
+}

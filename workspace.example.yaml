@@ -1,0 +1,11 @@
+workspace:
+  domain: workspace.vpsik.com
+
+services:
+  authentik: true
+  gitea: true
+  coolify: true
+  ollama: true
+  opencode: true
+  openwebui: true
+  restic: true

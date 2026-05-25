@@ -1,0 +1,22 @@
+server:
+  port: 8081
+  host: "0.0.0.0"
+
+auth:
+  jwt_secret: "test-secret-key"
+
+  users:
+    - username: admin
+      password_hash: "$2a$10$9zkr.i7ScFQNyg5oM2tKAe5f0/ZeXYHadMfdNiChHn2WSj.NV.xQu"
+
+services:
+  gitea:
+    url: "http://localhost:3000"
+    token: ""
+
+  coolify:
+    url: "http://localhost:8000"
+    token: ""
+
+  ollama:
+    url: "http://localhost:11434"

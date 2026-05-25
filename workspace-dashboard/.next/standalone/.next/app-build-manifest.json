@@ -1,0 +1,73 @@
+{
+  "pages": {
+    "/_not-found/page": [
+      "static/chunks/webpack-03f7c6bc932ce1e3.js",
+      "static/chunks/fd9d1056-87da80e0c187477b.js",
+      "static/chunks/117-baab43fc83142998.js",
+      "static/chunks/main-app-e137e6cd0da1ceaf.js",
+      "static/chunks/app/_not-found/page-b62982a1b0a6c401.js"
+    ],
+    "/layout": [
+      "static/chunks/webpack-03f7c6bc932ce1e3.js",
+      "static/chunks/fd9d1056-87da80e0c187477b.js",
+      "static/chunks/117-baab43fc83142998.js",
+      "static/chunks/main-app-e137e6cd0da1ceaf.js",
+      "static/css/2f4d505f9de806b1.css",
+      "static/chunks/app/layout-6214eb85b76e7933.js"
+    ],
+    "/chat/page": [
+      "static/chunks/webpack-03f7c6bc932ce1e3.js",
+      "static/chunks/fd9d1056-87da80e0c187477b.js",
+      "static/chunks/117-baab43fc83142998.js",
+      "static/chunks/main-app-e137e6cd0da1ceaf.js",
+      "static/chunks/258-31fdca77b39864be.js",
+      "static/chunks/app/chat/page-cac37b77000be627.js"
+    ],
+    "/dashboard/page": [
+      "static/chunks/webpack-03f7c6bc932ce1e3.js",
+      "static/chunks/fd9d1056-87da80e0c187477b.js",
+      "static/chunks/117-baab43fc83142998.js",
+      "static/chunks/main-app-e137e6cd0da1ceaf.js",
+      "static/chunks/258-31fdca77b39864be.js",
+      "static/chunks/app/dashboard/page-358ea8146b7e5013.js"
+    ],
+    "/login/page": [
+      "static/chunks/webpack-03f7c6bc932ce1e3.js",
+      "static/chunks/fd9d1056-87da80e0c187477b.js",
+      "static/chunks/117-baab43fc83142998.js",
+      "static/chunks/main-app-e137e6cd0da1ceaf.js",
+      "static/chunks/app/login/page-39b8cc016e023124.js"
+    ],
+    "/page": [
+      "static/chunks/webpack-03f7c6bc932ce1e3.js",
+      "static/chunks/fd9d1056-87da80e0c187477b.js",
+      "static/chunks/117-baab43fc83142998.js",
+      "static/chunks/main-app-e137e6cd0da1ceaf.js",
+      "static/chunks/app/page-0a8b9a7b052e6eac.js"
+    ],
+    "/services/coolify/page": [
+      "static/chunks/webpack-03f7c6bc932ce1e3.js",
+      "static/chunks/fd9d1056-87da80e0c187477b.js",
+      "static/chunks/117-baab43fc83142998.js",
+      "static/chunks/main-app-e137e6cd0da1ceaf.js",
+      "static/chunks/258-31fdca77b39864be.js",
+      "static/chunks/app/services/coolify/page-4ab99460d0310f79.js"
+    ],
+    "/services/gitea/page": [
+      "static/chunks/webpack-03f7c6bc932ce1e3.js",
+      "static/chunks/fd9d1056-87da80e0c187477b.js",
+      "static/chunks/117-baab43fc83142998.js",
+      "static/chunks/main-app-e137e6cd0da1ceaf.js",
+      "static/chunks/258-31fdca77b39864be.js",
+      "static/chunks/app/services/gitea/page-5e502094f2475a6b.js"
+    ],
+    "/services/ollama/page": [
+      "static/chunks/webpack-03f7c6bc932ce1e3.js",
+      "static/chunks/fd9d1056-87da80e0c187477b.js",
+      "static/chunks/117-baab43fc83142998.js",
+      "static/chunks/main-app-e137e6cd0da1ceaf.js",
+      "static/chunks/258-31fdca77b39864be.js",
+      "static/chunks/app/services/ollama/page-e0a35d5f368fdf1b.js"
+    ]
+  }
+}
