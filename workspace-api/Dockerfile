@@ -1,8 +1,8 @@
 FROM golang:1.22-alpine AS builder
 WORKDIR /src
-ENV GOPROXY=direct
+RUN apk add --no-cache ca-certificates git
 COPY go.mod go.sum ./
-RUN go mod download
+RUN GOPROXY=https://proxy.golang.org,direct go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -o /workspace-api .
 
