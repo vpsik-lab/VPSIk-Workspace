@@ -1,8 +1,7 @@
-FROM golang:1.22-alpine AS builder
+FROM golang:1.22-bookworm AS builder
 WORKDIR /src
-RUN apk add --no-cache ca-certificates
 COPY go.mod go.sum ./
-RUN GOPROXY=https://proxy.golang.org,direct go mod download
+RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -o /workspace-api .
 

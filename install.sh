@@ -130,8 +130,8 @@ if [ "$DRY_RUN" = false ]; then
     # Clone source to build Docker images
     BUILD_TMP=$(mktemp -d)
     git clone --depth 1 "https://github.com/$REPO.git" "$BUILD_TMP"
-    docker build -t vpsik-api:latest "$BUILD_TMP/workspace-api" 2>&1 | tail -1
-    docker build -t vpsik-dashboard:latest "$BUILD_TMP/workspace-dashboard" 2>&1 | tail -1
+    docker build --no-cache -t vpsik-api:latest "$BUILD_TMP/workspace-api" 2>&1 | tail -3
+    docker build --no-cache -t vpsik-dashboard:latest "$BUILD_TMP/workspace-dashboard" 2>&1 | tail -3
     rm -rf "$BUILD_TMP"
     log "Local Docker images built"
   else
@@ -147,9 +147,9 @@ if [ "$DRY_RUN" = false ]; then
 
       # Build local Docker images for API and Dashboard
       info "Building workspace-api Docker image..."
-      docker build -t vpsik-api:latest "$TMPDIR/workspace-api" 2>&1 | tail -1
+      docker build --no-cache -t vpsik-api:latest "$TMPDIR/workspace-api" 2>&1 | tail -3
       info "Building workspace-dashboard Docker image..."
-      docker build -t vpsik-dashboard:latest "$TMPDIR/workspace-dashboard" 2>&1 | tail -1
+      docker build --no-cache -t vpsik-dashboard:latest "$TMPDIR/workspace-dashboard" 2>&1 | tail -3
       log "Local Docker images built"
 
       rm -rf "$TMPDIR"
