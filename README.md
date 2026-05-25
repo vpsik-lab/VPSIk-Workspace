@@ -1,10 +1,82 @@
-# VPSIk Workspace
+# VPSIk WorkSpace
 
-**AI-native engineering workspace — One-command self-hosted stack for any VPS.**
+<p align="center">
+  <b>AI-Native Engineering Workspace — One-Command Setup for Any VPS.</b>
+</p>
+
+<p align="center">
+  <a href="https://github.com/vpsik-lab/VPSIk-Workspace">GitHub</a> •
+  <a href="https://vpsik.com">Website</a> •
+  <a href="mailto:opensource@vpsik.com">Contact</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT">
+  <img src="https://img.shields.io/badge/Go-1.22-blue" alt="Go">
+  <img src="https://img.shields.io/badge/Next.js-14-black" alt="Next.js">
+  <img src="https://img.shields.io/badge/status-stable-green" alt="Status">
+</p>
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/vpsik-lab/VPSIk-Workspace/main/install.sh | bash
 ```
+
+---
+
+## Editions
+
+| Feature | Open Source 🆓 | VPSIk Pro 💼 | WorkSpace SaaS ☁️ |
+|---------|:-------------:|:-----------:|:----------------:|
+| **Users** | Single | Team (multi-user) | Unlimited |
+| **Hosting** | Self-hosted | Self-hosted | Hosted by VPSIk |
+| **Price** | Free | License | Subscription |
+| One-command install | ✅ | ✅ | — |
+| Git hosting (Gitea) | ✅ | ✅ | ✅ |
+| Local AI (Ollama) | ✅ | ✅ | ✅ |
+| AI Chat (OpenWebUI) | ✅ | ✅ | ✅ |
+| IDE in browser (Code-Server) | ✅ | ✅ | ✅ |
+| Team communication (Mattermost) | ✅ | ✅ | ✅ |
+| Knowledge base (Outline) | ✅ | ✅ | ✅ |
+| Project management (Plane) | ✅ | ✅ | ✅ |
+| App deployment (Coolify) | ✅ | ✅ | ✅ |
+| SSO / Identity (Authentik) | ✅ | ✅ | ✅ |
+| Monitoring (Grafana + Prometheus) | ✅ | ✅ | ✅ |
+| Backup & restore (Restic) | ✅ | ✅ | ✅ |
+| AI CTO — full project analysis | — | ✅ | ✅ |
+| Team roles & permissions | — | ✅ | ✅ |
+| Shared projects | — | ✅ | ✅ |
+| Code review automation | — | ✅ | ✅ |
+| AI development reports | — | ✅ | ✅ |
+| Notifications (WhatsApp / Telegram / Slack / Notion) | — | ✅ | ✅ |
+| Direct GitHub integration | — | — | ✅ |
+| Multi-workspace | — | — | ✅ |
+| Fully managed (no VPS needed) | — | — | ✅ |
+
+---
+
+## VPSIk Pro
+
+Turn your workspace into a full-scale engineering company.
+
+- **AI CTO** — AI analyzes your project as a virtual CTO: architecture reviews, tech debt detection, dependency analysis, performance recommendations.
+- **Team Roles** — Owner, Admin, Developer, Reviewer with granular permissions.
+- **Shared Projects** — Collaborate in real-time. Assign tasks, track progress, review code.
+- **Code Review Automation** — Automated PR reviews with detailed reports and suggested fixes.
+- **Development Reports** — AI-generated weekly/monthly reports covering progress, bottlenecks, and next steps.
+- **Notifications** — Receive alerts and summaries via WhatsApp, Telegram, Slack, and Notion.
+
+---
+
+## WorkSpace SaaS
+
+The fully-hosted cloud experience. No server, no setup.
+
+- **Everything in Pro** — All Pro features included.
+- **Direct GitHub Integration** — Sync repositories, manage issues, trigger workflows directly.
+- **Multi-Workspace** — Separate workspaces for different teams or projects.
+- **Notifications** — Full integration across WhatsApp, Telegram, Slack, and Notion.
+- **Managed Infrastructure** — High-availability, automatic backups, SSL, monitoring — handled by VPSIk.
+- **No VPS Required** — Sign up at [vpsik.com](https://vpsik.com) and start immediately.
 
 ---
 
@@ -47,6 +119,17 @@ workspace_net (isolated Docker network)
 - **Portable**: Single `docker compose up -d` on any server
 - **External**: Runs outside Coolify, communicates via API only
 - **Self-contained**: All data in `/opt/workspace/` — easy backup & migration
+
+---
+
+## Prerequisites
+
+| Requirement | Minimum | Recommended |
+|------------|---------|-------------|
+| RAM | 4 GB | 8 GB |
+| Disk | 20 GB | 50 GB (SSD) |
+| Docker | 24+ | Latest |
+| OS | Linux (any) | Ubuntu 22.04+ / Debian 12 |
 
 ---
 
@@ -175,51 +258,6 @@ Global Flags:
 
 ---
 
-## Roadmap
-
-### Phase 1: Foundation  ﻿✅
-- [x] Docker scanner & detector
-- [x] Service templates (7 services)
-- [x] Plan engine & state management
-- [x] Traefik reverse proxy
-- [x] API proxy server (Go)
-- [x] Dashboard (Next.js 14)
-
-### Phase 2: One-Command Install
-- [ ] `install.sh` bootstrap script
-- [ ] GitHub release workflow
-- [ ] `vpsik init --auto`
-- [ ] `vpsik install --yes`
-- [ ] `vpsik doctor --fix`
-
-### Phase 3: Backup & Restore
-- [ ] `vpsik backup` command
-- [ ] `vpsik restore` command
-- [ ] Restic integration
-- [ ] Service-specific backup strategies
-- [ ] Scheduled backups
-
-### Phase 4: Service Expansion
-- [ ] Authentik SSO integration
-- [ ] Code-Server
-- [ ] Mattermost
-- [ ] Outline
-- [ ] Plane
-
-### Phase 5: Monitoring & Observability
-- [ ] Grafana dashboards per service
-- [ ] Prometheus alerts
-- [ ] Service health endpoints
-- [ ] Log aggregation
-
-### Phase 6: Enterprise
-- [ ] Multi-server support
-- [ ] Team management via Authentik
-- [ ] Audit logging
-- [ ] SLA monitoring
-
----
-
 ## Development
 
 ```bash
@@ -245,6 +283,16 @@ cd workspace-dashboard && npm run build
 
 See `workspace.example.yaml` for the full config reference.
 Environment variables override YAML settings at runtime.
+
+---
+
+## VPSIk
+
+**Website:** [vpsik.com](https://vpsik.com)
+**GitHub:** [github.com/vpsik-lab](https://github.com/vpsik-lab)
+**Email:** opensource@vpsik.com
+
+Built by **Youssef Soliman** — [github.com/Ymasoli](https://github.com/Ymasoli)
 
 ---
 
