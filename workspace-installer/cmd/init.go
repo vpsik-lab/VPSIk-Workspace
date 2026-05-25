@@ -82,6 +82,12 @@ func runAutoInit() error {
 		}
 	}
 
+	if info, err := os.Stat(outputPath); err == nil && info.IsDir() {
+		if err := os.Remove(outputPath); err != nil {
+			return fmt.Errorf("remove existing directory at output path: %w", err)
+		}
+	}
+
 	if err := os.WriteFile(outputPath, data, 0644); err != nil {
 		return fmt.Errorf("write config: %w", err)
 	}
@@ -173,6 +179,12 @@ func runInteractiveInit() error {
 
 	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
 		return fmt.Errorf("create output dir: %w", err)
+	}
+
+	if info, err := os.Stat(outputPath); err == nil && info.IsDir() {
+		if err := os.Remove(outputPath); err != nil {
+			return fmt.Errorf("remove existing directory at output path: %w", err)
+		}
 	}
 
 	if err := os.WriteFile(outputPath, data, 0644); err != nil {
