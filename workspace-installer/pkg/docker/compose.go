@@ -369,7 +369,7 @@ func GenerateComposeFile(services []string, network string, domain string, outpu
 
 	compose := composeFile{
 		Networks: map[string]networkDef{
-			network: {Name: network, External: false},
+			network: {Name: network, External: true},
 		},
 		Volumes:  volMap,
 		Services: svcMap,
