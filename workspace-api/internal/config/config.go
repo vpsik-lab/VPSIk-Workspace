@@ -29,9 +29,17 @@ type User struct {
 }
 
 type ServicesConfig struct {
-	Gitea   ServiceEndpoint `yaml:"gitea"`
-	Coolify ServiceEndpoint `yaml:"coolify"`
-	Ollama  ServiceEndpoint `yaml:"ollama"`
+	Gitea    ServiceEndpoint `yaml:"gitea"`
+	Coolify  ServiceEndpoint `yaml:"coolify"`
+	Ollama   ServiceEndpoint `yaml:"ollama"`
+	OpenCode ServiceEndpoint `yaml:"opencode"`
+	Restic   ResticConfig    `yaml:"restic"`
+}
+
+type ResticConfig struct {
+	Binary   string `yaml:"binary"`
+	RepoURL  string `yaml:"repo_url"`
+	Password string `yaml:"password"`
 }
 
 type ServiceEndpoint struct {
@@ -49,9 +57,6 @@ func Load(path string) (*APIConfig, error) {
 		Server: ServerConfig{
 			Port: 8080,
 			Host: "0.0.0.0",
-		},
-		Auth: AuthConfig{
-			JWTSecret: "change-me",
 		},
 	}
 

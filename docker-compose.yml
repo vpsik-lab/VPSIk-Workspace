@@ -1,0 +1,120 @@
+version: "3.8"
+
+networks:
+  vpsik:
+    name: vpsik
+    external: false
+
+volumes:
+  postgres-data:
+  grafana-data:
+  prometheus-data:
+  restic-data:
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  traefik:
+    image: traefik:v3.0
+    container_name: vpsik-traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - vpsik
+    logging: *default-logging
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: vpsik-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vpsik}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vpsik}
+      POSTGRES_DB: ${POSTGRES_DB:-vpsik}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - vpsik
+    logging: *default-logging
+
+  workspace-api:
+    build:
+      context: ./workspace-api
+      dockerfile: Dockerfile
+    container_name: vpsik-api
+    ports:
+      - "8081:8081"
+    environment:
+      API_PORT: "8081"
+      API_JWT_SECRET: ${API_JWT_SECRET:-change-me-in-production}
+      API_USERNAME: ${API_USERNAME:-admin}
+      API_PASSWORD: ${API_PASSWORD:-admin}
+      SERVICES_GITEA_URL: ${GITEA_URL:-http://gitea:3000}
+      SERVICES_GITEA_TOKEN: ${GITEA_TOKEN:-}
+      SERVICES_COOLIFY_URL: ${COOLIFY_URL:-http://coolify:3000}
+      SERVICES_COOLIFY_TOKEN: ${COOLIFY_TOKEN:-}
+      SERVICES_OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      SERVICES_OPENCODE_URL: ${OPENCODE_URL:-}
+      SERVICES_OPENCODE_TOKEN: ${OPENCODE_TOKEN:-}
+      SERVICES_RESTIC_REPO_URL: ${RESTIC_REPO:-/data/restic}
+      SERVICES_RESTIC_PASSWORD: ${RESTIC_PASSWORD:-vpsik}
+    volumes:
+      - restic-data:/data/restic
+    networks:
+      - vpsik
+    depends_on:
+      - postgres
+    logging: *default-logging
+
+  workspace-dashboard:
+    build:
+      context: ./workspace-dashboard
+      dockerfile: Dockerfile
+    container_name: vpsik-dashboard
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8081}
+      NEXT_PUBLIC_OPENWEBUI_URL: ${PUBLIC_OPENWEBUI_URL:-http://localhost:3001}
+    networks:
+      - vpsik
+    depends_on:
+      - workspace-api
+    logging: *default-logging
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: vpsik-grafana
+    ports:
+      - "3002:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - vpsik
+    logging: *default-logging
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: vpsik-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus-data:/prometheus
+    networks:
+      - vpsik
+    logging: *default-logging

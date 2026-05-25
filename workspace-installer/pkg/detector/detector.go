@@ -87,7 +87,7 @@ func detectContainer(scan *scanner.ScanResult, name, imageHint string, port int,
 	}
 
 	if apiURL != "" {
-		if checkAPI(apiURL) {
+		if CheckAPI(apiURL) {
 			info.Status = StatusInstalled
 			info.APIEndpoint = apiURL
 			info.Details = fmt.Sprintf("API reachable at %s", apiURL)
@@ -102,14 +102,14 @@ func detectContainer(scan *scanner.ScanResult, name, imageHint string, port int,
 func detectPort(name, imageHint string, port int, apiURL string) *ServiceInfo {
 	info := &ServiceInfo{Name: name, Status: StatusMissing}
 
-	if checkPort(port) {
+	if CheckPort(port) {
 		info.Status = StatusInstalled
 		info.Port = port
 		info.Details = fmt.Sprintf("Port %d is in use", port)
 		return info
 	}
 
-	if apiURL != "" && checkAPI(apiURL) {
+	if apiURL != "" && CheckAPI(apiURL) {
 		info.Status = StatusInstalled
 		info.APIEndpoint = apiURL
 		info.Details = fmt.Sprintf("API reachable at %s", apiURL)
@@ -145,7 +145,7 @@ func detectBinary(name string) *ServiceInfo {
 	return info
 }
 
-func checkAPI(url string) bool {
+func CheckAPI(url string) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -163,7 +163,7 @@ func checkAPI(url string) bool {
 	return resp.StatusCode < 500
 }
 
-func checkPort(port int) bool {
+func CheckPort(port int) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 

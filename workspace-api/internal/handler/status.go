@@ -3,18 +3,32 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
-
-	"github.com/vpsik/workspace-api/internal/client"
-	"github.com/vpsik/workspace-api/internal/config"
 )
 
+func httpCheck(url string) func(context.Context) error {
+	return func(ctx context.Context) error {
+		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+		if err != nil {
+			return err
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode >= 400 {
+			return fmt.Errorf("unexpected status: %d", resp.StatusCode)
+		}
+		return nil
+	}
+}
+
 type StatusHandler struct {
-	gitea   *client.GiteaClient
-	coolify *client.CoolifyClient
-	ollama  *client.OllamaClient
+	clients *Clients
 }
 
 type ServiceStatus struct {
@@ -24,27 +38,44 @@ type ServiceStatus struct {
 }
 
 type StatusResponse struct {
-	Services []ServiceStatus `json:"services"`
-	Timestamp string         `json:"timestamp"`
+	Services  []ServiceStatus `json:"services"`
+	Timestamp string          `json:"timestamp"`
 }
 
-func NewStatusHandler(cfg *config.APIConfig) *StatusHandler {
-	return &StatusHandler{
-		gitea:   client.NewGiteaClient(cfg.Services.Gitea.URL, cfg.Services.Gitea.Token),
-		coolify: client.NewCoolifyClient(cfg.Services.Coolify.URL, cfg.Services.Coolify.Token),
-		ollama:  client.NewOllamaClient(cfg.Services.Ollama.URL),
-	}
+func NewStatusHandler(clients *Clients) *StatusHandler {
+	return &StatusHandler{clients: clients}
 }
 
 func (h *StatusHandler) Status(w http.ResponseWriter, r *http.Request) {
-	services := []struct {
+	svcChecks := []struct {
 		Name   string
 		Check  func(context.Context) error
 	}{
-		{"gitea", h.gitea.CheckHealth},
-		{"coolify", h.coolify.CheckHealth},
-		{"ollama", h.ollama.CheckHealth},
+		{"gitea", h.clients.Gitea.CheckHealth},
+		{"coolify", h.clients.Coolify.CheckHealth},
+		{"ollama", h.clients.Ollama.CheckHealth},
+		{"restic", h.clients.Restic.CheckHealth},
 	}
+
+	if h.clients.OpenCode != nil {
+		svcChecks = append(svcChecks, struct {
+			Name   string
+			Check  func(context.Context) error
+		}{"opencode", h.clients.OpenCode.CheckHealth})
+	}
+
+	svcChecks = append(svcChecks,
+		struct {
+			Name  string
+			Check func(context.Context) error
+		}{"grafana", httpCheck("http://grafana:3000/api/health")},
+		struct {
+			Name  string
+			Check func(context.Context) error
+		}{"prometheus", httpCheck("http://prometheus:9090/-/healthy")},
+	)
+
+	services := svcChecks
 
 	results := make([]ServiceStatus, len(services))
 	var wg sync.WaitGroup

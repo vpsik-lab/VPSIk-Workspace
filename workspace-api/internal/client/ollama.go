@@ -13,6 +13,7 @@ import (
 type OllamaClient struct {
 	baseURL    string
 	httpClient *http.Client
+	streamClient *http.Client
 }
 
 type OllamaModel struct {
@@ -25,7 +26,7 @@ type OllamaModel struct {
 type OllamaChatRequest struct {
 	Model    string        `json:"model"`
 	Messages []ChatMessage `json:"messages"`
-	Stream   bool         `json:"stream"`
+	Stream   bool          `json:"stream"`
 }
 
 type ChatMessage struct {
@@ -40,10 +41,15 @@ type OllamaChatResponse struct {
 	Done      bool        `json:"done"`
 }
 
+type OllamaPullRequest struct {
+	Model string `json:"model"`
+}
+
 func NewOllamaClient(baseURL string) *OllamaClient {
 	return &OllamaClient{
 		baseURL: baseURL,
 		httpClient: &http.Client{Timeout: 120 * time.Second},
+		streamClient: &http.Client{Timeout: 0},
 	}
 }
 
@@ -125,4 +131,87 @@ func (c *OllamaClient) Chat(ctx context.Context, model string, messages []ChatMe
 	}
 
 	return chatResp.Message.Content, nil
+}
+
+func (c *OllamaClient) ChatStream(ctx context.Context, model string, messages []ChatMessage) (io.ReadCloser, error) {
+	body := OllamaChatRequest{
+		Model:    model,
+		Messages: messages,
+		Stream:   true,
+	}
+
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/chat", bytes.NewReader(payload))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.streamClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return nil, fmt.Errorf("ollama chat stream: %d", resp.StatusCode)
+	}
+
+	return resp.Body, nil
+}
+
+func (c *OllamaClient) PullModel(ctx context.Context, model string) error {
+	body := OllamaPullRequest{Model: model}
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/pull", bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("ollama pull: %d", resp.StatusCode)
+	}
+	return nil
+}
+
+func (c *OllamaClient) DeleteModel(ctx context.Context, model string) error {
+	body := struct {
+		Model string `json:"model"`
+	}{Model: model}
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.baseURL+"/api/delete", bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("ollama delete: %d", resp.StatusCode)
+	}
+	return nil
 }

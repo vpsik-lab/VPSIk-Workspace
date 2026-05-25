@@ -9,3 +9,5 @@ services:
   opencode: true
   openwebui: true
   restic: true
+  traefik: false
+  postgres: false

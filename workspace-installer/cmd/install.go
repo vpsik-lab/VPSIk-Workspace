@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/vpsik/workspace-installer/pkg/config"
@@ -87,6 +88,12 @@ var installCmd = &cobra.Command{
 		composeDir := filepath.Dir(configPath)
 		composePath := filepath.Join(composeDir, "docker-compose.generated.yml")
 
+		envPath := filepath.Join(composeDir, ".env")
+		if err := docker.GenerateEnvFile(toInstall, cfg.Workspace.Domain, envPath); err != nil {
+			return fmt.Errorf("generate env: %w", err)
+		}
+		fmt.Printf("✓ Generated .env at %s\n", envPath)
+
 		if err := docker.GenerateComposeFile(toInstall, cfg.Workspace.Domain, composePath); err != nil {
 			return fmt.Errorf("generate compose: %w", err)
 		}
@@ -96,6 +103,19 @@ var installCmd = &cobra.Command{
 		if err := docker.Deploy(composePath); err != nil {
 			return fmt.Errorf("deploy: %w", err)
 		}
+
+		fmt.Println("\n⏳ Checking service health...")
+		for _, name := range toInstall {
+			fmt.Printf("  %s...", name)
+			healthy := waitForService(name, 60*time.Second)
+			if healthy {
+				fmt.Println(" ✅")
+			} else {
+				fmt.Println(" ⚠ not responding yet")
+			}
+		}
+
+		svcState.Save(filepath.Join(composeDir, "workspace-state.json"))
 
 		fmt.Println("\n✅ Installation complete!")
 		fmt.Printf("   Domain: %s\n", cfg.Workspace.Domain)
@@ -111,4 +131,38 @@ var installCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(installCmd)
 	installCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show plan without making changes")
+}
+
+func waitForService(name string, timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	servicePorts := map[string]int{
+		"authentik": 9000,
+		"gitea":     3000,
+		"coolify":   8000,
+		"ollama":    11434,
+		"opencode":  30081,
+		"openwebui": 3001,
+	}
+	serviceAPIs := map[string]string{
+		"authentik": "http://localhost:9000",
+		"gitea":     "http://localhost:3000/api/healthz",
+		"coolify":   "http://localhost:8000/api/v1/health",
+		"ollama":    "http://localhost:11434/api/tags",
+		"openwebui": "http://localhost:3001",
+	}
+
+	for time.Now().Before(deadline) {
+		if port, ok := servicePorts[name]; ok {
+			if detector.CheckPort(port) {
+				return true
+			}
+		}
+		if apiURL, ok := serviceAPIs[name]; ok {
+			if detector.CheckAPI(apiURL) {
+				return true
+			}
+		}
+		time.Sleep(2 * time.Second)
+	}
+	return false
 }

@@ -24,6 +24,8 @@ type Services struct {
 	OpenCode  bool `yaml:"opencode"`
 	OpenWebUI bool `yaml:"openwebui"`
 	Restic    bool `yaml:"restic"`
+	Traefik   bool `yaml:"traefik"`
+	Postgres  bool `yaml:"postgres"`
 }
 
 func (s Services) EnabledList() []string {
@@ -49,6 +51,12 @@ func (s Services) EnabledList() []string {
 	if s.Restic {
 		enabled = append(enabled, "restic")
 	}
+	if s.Traefik {
+		enabled = append(enabled, "traefik")
+	}
+	if s.Postgres {
+		enabled = append(enabled, "postgres")
+	}
 	return enabled
 }
 
@@ -65,6 +73,8 @@ func DefaultConfig() *WorkspaceConfig {
 			OpenCode:  true,
 			OpenWebUI: true,
 			Restic:    true,
+			Traefik:   false,
+			Postgres:  false,
 		},
 	}
 }

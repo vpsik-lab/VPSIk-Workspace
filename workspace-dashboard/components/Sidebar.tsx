@@ -5,10 +5,14 @@ import { usePathname } from 'next/navigation'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: '◉' },
+  { href: '/chat', label: 'AI Chat', icon: '💬' },
   { href: '/services/gitea', label: 'Gitea', icon: '📦' },
   { href: '/services/ollama', label: 'Ollama', icon: '🧠' },
   { href: '/services/coolify', label: 'Coolify', icon: '🚀' },
-  { href: '/chat', label: 'AI Chat', icon: '💬' },
+  { href: '/services/opencode', label: 'OpenCode.ai', icon: '🤖' },
+  { href: '/services/openwebui', label: 'Open WebUI', icon: '🌐' },
+  { href: '/services/backup', label: 'Backup', icon: '💾' },
+  { href: '/services/monitoring', label: 'Monitoring', icon: '📊' },
 ]
 
 export default function Sidebar() {
@@ -25,7 +29,7 @@ export default function Sidebar() {
 
       <nav className="flex-1 py-4 px-3 space-y-1">
         {navItems.map((item) => {
-          const active = pathname === item.href
+          const active = pathname === item.href || pathname.startsWith(item.href + '/')
           return (
             <Link
               key={item.href}
@@ -42,6 +46,10 @@ export default function Sidebar() {
           )
         })}
       </nav>
+
+      <div className="px-3 py-3 border-t border-gray-800">
+        <p className="text-[10px] text-gray-600 uppercase tracking-wider">AI Workspace</p>
+      </div>
     </aside>
   )
 }

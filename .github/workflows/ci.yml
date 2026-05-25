@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  GO_VERSION: "1.22"
+  NODE_VERSION: "18"
+
+jobs:
+  installer:
+    name: workspace-installer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: workspace-installer/go.sum
+      - run: go build -o vpsik .
+        working-directory: workspace-installer
+      - run: go test ./...
+        working-directory: workspace-installer
+
+  api:
+    name: workspace-api
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: workspace-api/go.sum
+      - run: go build -o workspace-api .
+        working-directory: workspace-api
+      - run: go vet ./...
+        working-directory: workspace-api
+
+  dashboard:
+    name: workspace-dashboard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: workspace-dashboard/package-lock.json
+      - run: npm ci
+        working-directory: workspace-dashboard
+      - run: npm run build
+        working-directory: workspace-dashboard
+
+  docker:
+    name: docker-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose build

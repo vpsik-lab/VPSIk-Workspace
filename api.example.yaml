@@ -3,7 +3,7 @@ server:
   host: "0.0.0.0"
 
 auth:
-  jwt_secret: "change-this-to-a-secure-secret"
+  jwt_secret: "change-this-to-a-secure-secret-at-least-32-chars"
 
   users:
     - username: admin
@@ -20,3 +20,7 @@ services:
 
   ollama:
     url: "http://localhost:11434"
+
+  opencode:
+    url: ""
+    token: ""
