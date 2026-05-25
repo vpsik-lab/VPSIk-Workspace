@@ -147,7 +147,7 @@ var ServiceTemplates = map[string]*ServiceCompose{
 	},
 	"code-server": {
 		Name:        "codeserver",
-		Image:       "coder/code-server:latest",
+		Image:       "codercom/code-server:latest",
 		Expose:      []string{"8443"},
 		Volumes:     []string{"codeserver-data:/home/coder"},
 		Network:     "workspace_net",

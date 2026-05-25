@@ -55,7 +55,7 @@ func Run(scan *scanner.ScanResult, enabledServices []string) *Result {
 		"postgres":    func() *ServiceInfo { return detectContainer(scan, "postgres", "postgres", 5432, "") },
 		"grafana":     func() *ServiceInfo { return detectContainer(scan, "grafana", "grafana/grafana", 3000, "http://localhost:3000/api/health") },
 		"prometheus":  func() *ServiceInfo { return detectContainer(scan, "prometheus", "prom/prometheus", 9090, "http://localhost:9090/-/healthy") },
-		"code-server": func() *ServiceInfo { return detectContainer(scan, "codeserver", "coder/code-server", 8443, "http://localhost:8443/healthz") },
+		"code-server": func() *ServiceInfo { return detectContainer(scan, "codeserver", "codercom/code-server", 8443, "http://localhost:8443/healthz") },
 		"plane":       func() *ServiceInfo { return detectContainer(scan, "plane", "makeplane/plane", 8080, "http://localhost:8080/api/v1/health") },
 		"outline":     func() *ServiceInfo { return detectContainer(scan, "outline", "outlinewiki/outline", 3000, "http://localhost:3000/api/health") },
 		"mattermost":  func() *ServiceInfo { return detectContainer(scan, "mattermost", "mattermost/mattermost", 8065, "http://localhost:8065/api/v4/system/health") },

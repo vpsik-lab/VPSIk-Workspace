@@ -140,7 +140,7 @@ func TestServiceTemplates_CodeServer(t *testing.T) {
 		t.Fatal("expected code-server template")
 	}
 
-	if tmpl.Image != "coder/code-server:latest" {
+	if tmpl.Image != "codercom/code-server:latest" {
 		t.Errorf("expected coder/code-server:latest, got %s", tmpl.Image)
 	}
 
