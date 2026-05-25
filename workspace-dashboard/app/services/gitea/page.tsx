@@ -6,7 +6,7 @@ import UserMenu from '@/components/UserMenu'
 import ProtectedPage from '@/components/ProtectedPage'
 import { ListSkeleton } from '@/components/LoadingSkeleton'
 import { useAuth } from '@/lib/auth-context'
-import { getGiteaRepos, GiteaRepo, API_BASE, authHeaders } from '@/lib/api'
+import { getGiteaRepos, GiteaRepo, API_BASE } from '@/lib/api'
 
 interface WebhookForm {
   repo: string
@@ -36,7 +36,8 @@ export default function GiteaPage() {
     try {
       const res = await fetch(`${API_BASE}/api/gitea/webhooks`, {
         method: 'POST',
-        headers: authHeaders(),
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           repo: webhook.repo,
           url: webhook.url,

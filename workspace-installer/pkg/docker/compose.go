@@ -579,8 +579,18 @@ func PullImages(services []string) error {
 		}
 		seen[tpl.Image] = true
 
+		// Skip pull for locally-built images
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		check := exec.CommandContext(ctx, "docker", "image", "inspect", tpl.Image)
+		if err := check.Run(); err == nil {
+			cancel()
+			fmt.Printf("  Using local image %s\n", tpl.Image)
+			continue
+		}
+		cancel()
+
 		fmt.Printf("  Pulling %s...\n", tpl.Image)
-		ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
+		ctx, cancel = context.WithTimeout(context.Background(), 300*time.Second)
 		cmd := exec.CommandContext(ctx, "docker", "pull", tpl.Image)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
