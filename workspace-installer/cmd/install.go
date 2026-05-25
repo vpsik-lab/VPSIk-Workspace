@@ -133,10 +133,12 @@ var installCmd = &cobra.Command{
 		fmt.Printf("✓ Generated docker-compose at %s\n", composePath)
 
 		apiConfigPath := filepath.Join(composeDir, "api.yaml")
-		if err := docker.GenerateAPIConfig(toInstall, cfg.Workspace.Domain, apiConfigPath); err != nil {
+		adminPassword, err := docker.GenerateAPIConfig(toInstall, cfg.Workspace.Domain, apiConfigPath)
+		if err != nil {
 			return fmt.Errorf("generate api config: %w", err)
 		}
 		fmt.Printf("✓ Generated API config at %s\n", apiConfigPath)
+		fmt.Printf("  Admin password: %s\n", adminPassword)
 
 		fmt.Println("\n📦 Pulling images...")
 		if err := docker.PullImages(toInstall); err != nil {
