@@ -1,8 +1,8 @@
 function getApiBase(): string {
   if (typeof window !== 'undefined') {
-    return `http://${window.location.hostname}:8081`
+    return ''
   }
-  return 'http://localhost:8081'
+  return 'http://api:8081'
 }
 
 export const API_BASE = getApiBase()
