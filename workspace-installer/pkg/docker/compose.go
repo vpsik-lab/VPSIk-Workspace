@@ -18,6 +18,7 @@ import (
 type ServiceCompose struct {
 	Name        string
 	Image       string
+	BuildCtx    string
 	Ports       []string
 	Expose      []string
 	Volumes     []string
@@ -226,6 +227,32 @@ var ServiceTemplates = map[string]*ServiceCompose{
 		Image:   "restic/restic:latest",
 		Volumes: []string{"restic-data:/data"},
 		Network: "workspace_net",
+	},
+	"dashboard": {
+		Name:        "dashboard",
+		Image:       "vpsik-dashboard:latest",
+		Expose:      []string{"3000"},
+		Network:     "workspace_net",
+		TraefikHost: "${VPSIK_DOMAIN}",
+		TraefikPort: "3000",
+		DependsOn:   []string{"api"},
+		EnvVars: map[string]string{
+			"NEXT_PUBLIC_API_URL": "https://api.${VPSIK_DOMAIN}",
+		},
+	},
+	"api": {
+		Name:        "api",
+		Image:       "vpsik-api:latest",
+		Expose:      []string{"8081"},
+		Network:     "workspace_net",
+		TraefikHost: "api.${VPSIK_DOMAIN}",
+		TraefikPort: "8081",
+		EnvVars: map[string]string{
+			"VPSIK_DOMAIN":    "${VPSIK_DOMAIN}",
+			"SESSION_SECRET":  "${SESSION_SECRET}",
+			"AUTH_USERNAME":   "${AUTH_USERNAME:-admin}",
+			"AUTH_PASSWORD":   "${AUTH_PASSWORD:-admin}",
+		},
 	},
 	"cloudflare": {
 		Name:  "cloudflared",

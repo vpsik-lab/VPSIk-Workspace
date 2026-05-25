@@ -38,6 +38,8 @@ type Services struct {
 	Mattermost bool `yaml:"mattermost"`
 	Cloudflare bool `yaml:"cloudflare"`
 	Redis      bool `yaml:"redis"`
+	Api        bool `yaml:"api"`
+	Dashboard  bool `yaml:"dashboard"`
 }
 
 type BackupConfig struct {
@@ -75,6 +77,8 @@ func (s Services) EnabledList() []string {
 	if s.Mattermost { enabled = append(enabled, "mattermost") }
 	if s.Cloudflare { enabled = append(enabled, "cloudflare") }
 	if s.Redis      { enabled = append(enabled, "redis") }
+	if s.Api        { enabled = append(enabled, "api") }
+	if s.Dashboard  { enabled = append(enabled, "dashboard") }
 	return enabled
 }
 
@@ -101,6 +105,8 @@ func DefaultConfig() *WorkspaceConfig {
 			Grafana:    true,
 			Prometheus: true,
 			Cloudflare: false,
+			Api:        true,
+			Dashboard:  true,
 		},
 		System: &SystemConfig{
 			InstallPath: "/opt/workspace",

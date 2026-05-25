@@ -126,6 +126,14 @@ if [ "$DRY_RUN" = false ]; then
     chmod +x /tmp/vpsik
     sudo mv /tmp/vpsik "$BIN_DIR/vpsik"
     log "vpsik binary installed to $BIN_DIR/vpsik"
+
+    # Clone source to build Docker images
+    BUILD_TMP=$(mktemp -d)
+    git clone --depth 1 "https://github.com/$REPO.git" "$BUILD_TMP"
+    docker build -t vpsik-api:latest "$BUILD_TMP/workspace-api" 2>&1 | tail -1
+    docker build -t vpsik-dashboard:latest "$BUILD_TMP/workspace-dashboard" 2>&1 | tail -1
+    rm -rf "$BUILD_TMP"
+    log "Local Docker images built"
   else
     # Fallback: build from source
     warn "Binary download failed, building from source..."
@@ -135,8 +143,16 @@ if [ "$DRY_RUN" = false ]; then
       cd "$TMPDIR/workspace-installer"
       go build -o vpsik .
       sudo mv vpsik "$BIN_DIR/vpsik"
-      rm -rf "$TMPDIR"
       log "vpsik built and installed to $BIN_DIR/vpsik"
+
+      # Build local Docker images for API and Dashboard
+      info "Building workspace-api Docker image..."
+      docker build -t vpsik-api:latest "$TMPDIR/workspace-api" 2>&1 | tail -1
+      info "Building workspace-dashboard Docker image..."
+      docker build -t vpsik-dashboard:latest "$TMPDIR/workspace-dashboard" 2>&1 | tail -1
+      log "Local Docker images built"
+
+      rm -rf "$TMPDIR"
     else
       err "Go not available and binary download failed. Install Go or download manually."
       exit 1

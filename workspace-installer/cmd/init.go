@@ -65,6 +65,8 @@ func runAutoInit() error {
 	cfg.Services.Plane = contains(enabledServices, "plane")
 	cfg.Services.OpenCode = contains(enabledServices, "opencode")
 	cfg.Services.Cloudflare = contains(enabledServices, "cloudflare")
+	cfg.Services.Api = contains(enabledServices, "api")
+	cfg.Services.Dashboard = contains(enabledServices, "dashboard")
 
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
@@ -129,6 +131,8 @@ func runInteractiveInit() error {
 		{"mattermost", "Mattermost (Team Chat)"},
 		{"outline", "Outline (Knowledge Base)"},
 		{"plane", "Plane (Project Management)"},
+		{"api", "Workspace API"},
+		{"dashboard", "Workspace Dashboard"},
 		{"restic", "Restic (Backup)"},
 		{"grafana", "Grafana (Monitoring)"},
 		{"cloudflare", "Cloudflare Tunnel"},
@@ -157,6 +161,8 @@ func runInteractiveInit() error {
 	cfg.Services.Restic = services["restic"]
 	cfg.Services.Grafana = services["grafana"]
 	cfg.Services.Cloudflare = services["cloudflare"]
+	cfg.Services.Api = services["api"]
+	cfg.Services.Dashboard = services["dashboard"]
 
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
