@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -172,46 +174,23 @@ func init() {
 
 func waitForService(name string, timeout time.Duration) bool {
 	deadline := time.Now().Add(timeout)
-	servicePorts := map[string]int{
-		"authentik":   9000,
-		"gitea":       3000,
-		"coolify":     3000,
-		"ollama":      11434,
-		"opencode":    30081,
-		"openwebui":   8080,
-		"code-server": 8443,
-		"plane":       8080,
-		"outline":     3000,
-		"mattermost":  8065,
-		"grafana":     3000,
-		"prometheus":  9090,
-	}
-	serviceAPIs := map[string]string{
-		"authentik":   "http://localhost:9000",
-		"gitea":       "http://localhost:3000/api/healthz",
-		"coolify":     "http://localhost:3000/api/v1/health",
-		"ollama":      "http://localhost:11434/api/tags",
-		"openwebui":   "http://localhost:8080",
-		"code-server": "http://localhost:8443/healthz",
-		"plane":       "http://localhost:8080/api/v1/health",
-		"outline":     "http://localhost:3000/api/health",
-		"mattermost":  "http://localhost:8065/api/v4/system/health",
-		"grafana":     "http://localhost:3000/api/health",
-		"prometheus":  "http://localhost:9090/-/healthy",
+	containerName := name
+	if tpl, ok := docker.ServiceTemplates[name]; ok {
+		containerName = tpl.Name
 	}
 
 	for time.Now().Before(deadline) {
-		if port, ok := servicePorts[name]; ok {
-			if detector.CheckPort(port) {
-				return true
-			}
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		cmd := exec.CommandContext(ctx, "docker", "ps",
+			"--filter", fmt.Sprintf("name=%s", containerName),
+			"--filter", "status=running",
+			"--format", "{{.Names}}")
+		out, err := cmd.Output()
+		cancel()
+		if err == nil && strings.TrimSpace(string(out)) != "" {
+			return true
 		}
-		if apiURL, ok := serviceAPIs[name]; ok {
-			if detector.CheckAPI(apiURL) {
-				return true
-			}
-		}
-		time.Sleep(2 * time.Second)
+		time.Sleep(3 * time.Second)
 	}
 	return false
 }
