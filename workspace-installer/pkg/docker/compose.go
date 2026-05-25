@@ -533,7 +533,7 @@ func GenerateAPIConfig(services []string, domain string, outputPath string) (str
 		Coolify:    svcEndpoint{URL: "http://coolify:3000"},
 		Ollama:     svcEndpoint{URL: "http://ollama:11434"},
 		OpenCode:   svcEndpoint{URL: "", Token: ""},
-		Restic:     resticCfg{Binary: "restic", RepoURL: "/data/restic", Password: ""},
+		Restic:     resticCfg{Binary: "restic", RepoURL: "", Password: ""},
 		CodeServer: svcEndpoint{URL: "http://codeserver:8443"},
 	}
 
