@@ -14,8 +14,9 @@ type APIConfig struct {
 }
 
 type ServerConfig struct {
-	Port int    `yaml:"port"`
-	Host string `yaml:"host"`
+	Port       int    `yaml:"port"`
+	Host       string `yaml:"host"`
+	CORSOrigin string `yaml:"cors_origin"`
 }
 
 type AuthConfig struct {
@@ -29,11 +30,15 @@ type User struct {
 }
 
 type ServicesConfig struct {
-	Gitea    ServiceEndpoint `yaml:"gitea"`
-	Coolify  ServiceEndpoint `yaml:"coolify"`
-	Ollama   ServiceEndpoint `yaml:"ollama"`
-	OpenCode ServiceEndpoint `yaml:"opencode"`
-	Restic   ResticConfig    `yaml:"restic"`
+	Gitea       ServiceEndpoint `yaml:"gitea"`
+	Coolify     ServiceEndpoint `yaml:"coolify"`
+	Ollama      ServiceEndpoint `yaml:"ollama"`
+	OpenCode    ServiceEndpoint `yaml:"opencode"`
+	Restic      ResticConfig    `yaml:"restic"`
+	CodeServer  ServiceEndpoint `yaml:"code-server"`
+	Plane       ServiceEndpoint `yaml:"plane"`
+	Outline     ServiceEndpoint `yaml:"outline"`
+	Mattermost  ServiceEndpoint `yaml:"mattermost"`
 }
 
 type ResticConfig struct {
@@ -55,7 +60,7 @@ func Load(path string) (*APIConfig, error) {
 
 	cfg := &APIConfig{
 		Server: ServerConfig{
-			Port: 8080,
+			Port: 8081,
 			Host: "0.0.0.0",
 		},
 	}

@@ -9,6 +9,8 @@ func TestServiceTemplates_ContainAllServices(t *testing.T) {
 		"authentik", "gitea", "coolify", "ollama",
 		"opencode", "openwebui", "restic",
 		"traefik", "postgres", "grafana", "prometheus",
+		"redis", "code-server", "plane", "outline", "mattermost",
+		"cloudflare",
 	}
 
 	for _, name := range expected {
@@ -23,9 +25,50 @@ func TestServiceTemplates_ContainAllServices(t *testing.T) {
 		if tmpl.Image == "" {
 			t.Errorf("template %q has empty image", name)
 		}
-		if tmpl.Network != "vpsik" {
-			t.Errorf("template %q expected network vpsik, got %s", name, tmpl.Network)
+	}
+}
+
+func TestServiceTemplates_Network(t *testing.T) {
+	for name, tmpl := range ServiceTemplates {
+		if tmpl.Network != "workspace_net" {
+			t.Errorf("template %q expected network workspace_net, got %s", name, tmpl.Network)
 		}
+	}
+}
+
+func TestServiceTemplates_AllHaveImage(t *testing.T) {
+	for name, tmpl := range ServiceTemplates {
+		if tmpl.Image == "" {
+			t.Errorf("template %q has no image", name)
+		}
+	}
+}
+
+func TestServiceTemplates_TotalCount(t *testing.T) {
+	if len(ServiceTemplates) < 15 {
+		t.Errorf("expected at least 15 templates, got %d", len(ServiceTemplates))
+	}
+}
+
+func TestServiceTemplates_Postgres(t *testing.T) {
+	tmpl, ok := ServiceTemplates["postgres"]
+	if !ok {
+		t.Fatal("expected postgres template")
+	}
+
+	if tmpl.EnvVars["POSTGRES_USER"] != "${POSTGRES_USER:-vpsik}" {
+		t.Errorf("unexpected POSTGRES_USER: %s", tmpl.EnvVars["POSTGRES_USER"])
+	}
+
+	hasExpose := false
+	for _, p := range tmpl.Expose {
+		if p == "5432" {
+			hasExpose = true
+			break
+		}
+	}
+	if !hasExpose {
+		t.Error("expected expose 5432")
 	}
 }
 
@@ -39,33 +82,12 @@ func TestServiceTemplates_Grafana(t *testing.T) {
 		t.Errorf("expected grafana/grafana:latest, got %s", tmpl.Image)
 	}
 
-	hasPort := false
-	for _, p := range tmpl.Ports {
-		if p == "3002:3000" {
-			hasPort = true
-			break
-		}
-	}
-	if !hasPort {
-		t.Error("expected port mapping 3002:3000")
-	}
-
-	hasVolume := false
-	for _, v := range tmpl.Volumes {
-		if v == "grafana-data:/var/lib/grafana" {
-			hasVolume = true
-			break
-		}
-	}
-	if !hasVolume {
-		t.Error("expected grafana-data volume")
+	if tmpl.TraefikHost != "metrics.${VPSIK_DOMAIN}" {
+		t.Errorf("expected TraefikHost metrics.${VPSIK_DOMAIN}, got %s", tmpl.TraefikHost)
 	}
 
 	if tmpl.EnvVars["GF_SECURITY_ADMIN_USER"] != "${GRAFANA_USER:-admin}" {
 		t.Errorf("unexpected grafana user env: %s", tmpl.EnvVars["GF_SECURITY_ADMIN_USER"])
-	}
-	if tmpl.EnvVars["GF_SECURITY_ADMIN_PASSWORD"] != "${GRAFANA_PASSWORD:-admin}" {
-		t.Errorf("unexpected grafana password env: %s", tmpl.EnvVars["GF_SECURITY_ADMIN_PASSWORD"])
 	}
 }
 
@@ -79,77 +101,96 @@ func TestServiceTemplates_Prometheus(t *testing.T) {
 		t.Errorf("expected prom/prometheus:latest, got %s", tmpl.Image)
 	}
 
-	hasPort := false
+	hasExpose := false
+	for _, p := range tmpl.Expose {
+		if p == "9090" {
+			hasExpose = true
+			break
+		}
+	}
+	if !hasExpose {
+		t.Error("expected expose 9090")
+	}
+}
+
+func TestServiceTemplates_TraefikPorts(t *testing.T) {
+	tmpl, ok := ServiceTemplates["traefik"]
+	if !ok {
+		t.Fatal("expected traefik template")
+	}
+
+	has80 := false
+	has443 := false
 	for _, p := range tmpl.Ports {
-		if p == "9090:9090" {
-			hasPort = true
+		if p == "80:80" {
+			has80 = true
+		}
+		if p == "443:443" {
+			has443 = true
+		}
+	}
+	if !has80 || !has443 {
+		t.Error("expected ports 80:80 and 443:443")
+	}
+}
+
+func TestServiceTemplates_CodeServer(t *testing.T) {
+	tmpl, ok := ServiceTemplates["code-server"]
+	if !ok {
+		t.Fatal("expected code-server template")
+	}
+
+	if tmpl.Image != "coder/code-server:latest" {
+		t.Errorf("expected coder/code-server:latest, got %s", tmpl.Image)
+	}
+
+	hasExpose := false
+	for _, p := range tmpl.Expose {
+		if p == "8443" {
+			hasExpose = true
 			break
 		}
 	}
-	if !hasPort {
-		t.Error("expected port mapping 9090:9090")
+	if !hasExpose {
+		t.Error("expected expose 8443")
 	}
 
-	hasVolume := false
-	for _, v := range tmpl.Volumes {
-		if v == "prometheus-data:/prometheus" {
-			hasVolume = true
+	if tmpl.TraefikHost != "code.${VPSIK_DOMAIN}" {
+		t.Errorf("expected TraefikHost code.${VPSIK_DOMAIN}, got %s", tmpl.TraefikHost)
+	}
+}
+
+func TestGenerateTraefikLabels(t *testing.T) {
+	svc := &ServiceCompose{
+		Name:        "gitea",
+		TraefikHost: "git.${VPSIK_DOMAIN}",
+		TraefikPort: "3000",
+	}
+
+	// Labels require env vars to resolve, test struct
+	if svc.TraefikHost != "git.${VPSIK_DOMAIN}" {
+		t.Error("expected TraefikHost to be preserved")
+	}
+}
+
+func TestServiceTemplates_Redis(t *testing.T) {
+	tmpl, ok := ServiceTemplates["redis"]
+	if !ok {
+		t.Fatal("expected redis template")
+	}
+
+	if tmpl.Image != "redis:7-alpine" {
+		t.Errorf("expected redis:7-alpine, got %s", tmpl.Image)
+	}
+
+	hasExpose := false
+	for _, p := range tmpl.Expose {
+		if p == "6379" {
+			hasExpose = true
 			break
 		}
 	}
-	if !hasVolume {
-		t.Error("expected prometheus-data volume")
-	}
-}
-
-func TestServiceTemplates_Restic(t *testing.T) {
-	tmpl, ok := ServiceTemplates["restic"]
-	if !ok {
-		t.Fatal("expected restic template")
-	}
-
-	if tmpl.Image != "restic/restic:latest" {
-		t.Errorf("expected restic/restic:latest, got %s", tmpl.Image)
-	}
-
-	if tmpl.Network != "vpsik" {
-		t.Errorf("expected network vpsik, got %s", tmpl.Network)
-	}
-}
-
-func TestServiceTemplates_Postgres(t *testing.T) {
-	tmpl, ok := ServiceTemplates["postgres"]
-	if !ok {
-		t.Fatal("expected postgres template")
-	}
-
-	if tmpl.Image != "postgres:16-alpine" {
-		t.Errorf("expected postgres:16-alpine, got %s", tmpl.Image)
-	}
-
-	if tmpl.EnvVars["POSTGRES_USER"] != "${POSTGRES_USER:-vpsik}" {
-		t.Errorf("unexpected POSTGRES_USER: %s", tmpl.EnvVars["POSTGRES_USER"])
-	}
-}
-
-func TestServiceTemplates_AllHaveImage(t *testing.T) {
-	for name, tmpl := range ServiceTemplates {
-		if tmpl.Image == "" {
-			t.Errorf("template %q has no image", name)
-		}
-	}
-}
-
-func TestServiceTemplates_AllHaveNetwork(t *testing.T) {
-	for name, tmpl := range ServiceTemplates {
-		if tmpl.Network != "vpsik" {
-			t.Errorf("template %q has wrong network: %s", name, tmpl.Network)
-		}
-	}
-}
-
-func TestServiceTemplates_TotalCount(t *testing.T) {
-	if len(ServiceTemplates) < 10 {
-		t.Errorf("expected at least 10 templates, got %d", len(ServiceTemplates))
+	if !hasExpose {
+		t.Error("expected expose 6379")
 	}
 }

@@ -1,0 +1,27 @@
+# Development override — opens ports for local access
+# Usage: docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
+
+services:
+  workspace-api:
+    ports:
+      - "8081:8081"
+
+  workspace-dashboard:
+    ports:
+      - "3000:3000"
+
+  postgres:
+    ports:
+      - "5432:5432"
+
+  grafana:
+    ports:
+      - "3002:3000"
+
+  prometheus:
+    ports:
+      - "9090:9090"
+
+  redis:
+    ports:
+      - "6379:6379"

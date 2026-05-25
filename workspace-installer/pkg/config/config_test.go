@@ -14,8 +14,8 @@ func TestDefaultConfig(t *testing.T) {
 	if !cfg.Services.Gitea {
 		t.Error("expected gitea to be enabled by default")
 	}
-	if cfg.Services.Traefik {
-		t.Error("expected traefik to be disabled by default")
+	if !cfg.Services.Traefik {
+		t.Error("expected traefik to be enabled by default")
 	}
 }
 
@@ -25,7 +25,7 @@ func TestEnabledList(t *testing.T) {
 		services Services
 		expected int
 	}{
-		{"all enabled", Services{Authentik: true, Gitea: true, Coolify: true, Ollama: true, OpenCode: true, OpenWebUI: true, Restic: true, Traefik: true, Postgres: true}, 9},
+		{"all enabled", Services{Authentik: true, Gitea: true, Coolify: true, Ollama: true, OpenCode: true, OpenWebUI: true, Restic: true, Traefik: true, Postgres: true, Grafana: true, Prometheus: true, CodeServer: true, Redis: true}, 13},
 		{"none enabled", Services{}, 0},
 		{"only gitea", Services{Gitea: true}, 1},
 		{"traefik+postgres", Services{Traefik: true, Postgres: true}, 2},

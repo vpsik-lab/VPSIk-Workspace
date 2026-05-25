@@ -11,6 +11,10 @@ const navItems = [
   { href: '/services/coolify', label: 'Coolify', icon: '🚀' },
   { href: '/services/opencode', label: 'OpenCode.ai', icon: '🤖' },
   { href: '/services/openwebui', label: 'Open WebUI', icon: '🌐' },
+  { href: '/services/codeserver', label: 'Code Server', icon: '⌨️' },
+  { href: '/services/mattermost', label: 'Mattermost', icon: '💬' },
+  { href: '/services/outline', label: 'Outline', icon: '📝' },
+  { href: '/services/plane', label: 'Plane', icon: '📋' },
   { href: '/services/backup', label: 'Backup', icon: '💾' },
   { href: '/services/monitoring', label: 'Monitoring', icon: '📊' },
 ]
@@ -27,7 +31,7 @@ export default function Sidebar() {
         </Link>
       </div>
 
-      <nav className="flex-1 py-4 px-3 space-y-1">
+      <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + '/')
           return (
@@ -48,7 +52,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="px-3 py-3 border-t border-gray-800">
-        <p className="text-[10px] text-gray-600 uppercase tracking-wider">AI Workspace</p>
+        <p className="text-[10px] text-gray-600 uppercase tracking-wider">Workspace v0.1</p>
       </div>
     </aside>
   )

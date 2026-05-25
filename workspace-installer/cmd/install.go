@@ -17,7 +17,10 @@ import (
 	"github.com/vpsik/workspace-installer/pkg/state"
 )
 
-var dryRun bool
+var (
+	dryRun  bool
+	autoYes bool
+)
 
 var installCmd = &cobra.Command{
 	Use:   "install",
@@ -36,7 +39,30 @@ var installCmd = &cobra.Command{
 			return fmt.Errorf("docker not available")
 		}
 
-		fmt.Println("📋 Detecting services...")
+		networkName := cfg.NetworkName()
+
+		if scanResult.CoolifyDetected != nil {
+			fmt.Printf("✓ Coolify detected: %s (port %d)\n",
+				scanResult.CoolifyDetected.Container,
+				scanResult.CoolifyDetected.Port)
+
+			if scanResult.CoolifyDetected.HasProxy {
+				fmt.Println("  ⚠ Coolify is using ports 80/443 — will use internal networking")
+			}
+		} else {
+			fmt.Println("ℹ Coolify not detected")
+			if !autoYes {
+				fmt.Print("  Install Coolify? [y/N]: ")
+				reader := bufio.NewReader(os.Stdin)
+				response, _ := reader.ReadString('\n')
+				response = strings.TrimSpace(strings.ToLower(response))
+				if response == "y" || response == "yes" {
+					cfg.Services.Coolify = true
+				}
+			}
+		}
+
+		fmt.Println("\n📋 Detecting services...")
 		enabled := cfg.Services.EnabledList()
 		detection := detector.Run(scanResult, enabled)
 		svcState := state.Build(detection)
@@ -64,14 +90,15 @@ var installCmd = &cobra.Command{
 			return nil
 		}
 
-		fmt.Print("\n⚠ Apply this plan? (yes/no): ")
-		reader := bufio.NewReader(os.Stdin)
-	response, _ := reader.ReadString('\n')
-	response = strings.TrimSpace(response)
-
-		if response != "yes" {
-			fmt.Println("Installation cancelled.")
-			return nil
+		if !autoYes {
+			fmt.Print("\n⚠ Apply this plan? (yes/no): ")
+			reader := bufio.NewReader(os.Stdin)
+			response, _ := reader.ReadString('\n')
+			response = strings.TrimSpace(response)
+			if response != "yes" {
+				fmt.Println("Installation cancelled.")
+				return nil
+			}
 		}
 
 		var toInstall []string
@@ -81,13 +108,16 @@ var installCmd = &cobra.Command{
 			}
 		}
 
-		if err := docker.EnsureNetwork("vpsik"); err != nil {
+		if err := docker.EnsureNetwork(networkName); err != nil {
 			return fmt.Errorf("ensure network: %w", err)
 		}
-		fmt.Println("✓ Network 'vpsik' ready")
+		fmt.Printf("✓ Network '%s' ready\n", networkName)
 
-		composeDir := filepath.Dir(configPath)
-		composePath := filepath.Join(composeDir, "docker-compose.generated.yml")
+		composeDir := cfg.InstallPath()
+		if composeDir == "" {
+			composeDir = filepath.Dir(configPath)
+		}
+		composePath := filepath.Join(composeDir, "compose", "docker-compose.yml")
 
 		envPath := filepath.Join(composeDir, ".env")
 		if err := docker.GenerateEnvFile(toInstall, cfg.Workspace.Domain, envPath); err != nil {
@@ -95,10 +125,15 @@ var installCmd = &cobra.Command{
 		}
 		fmt.Printf("✓ Generated .env at %s\n", envPath)
 
-		if err := docker.GenerateComposeFile(toInstall, cfg.Workspace.Domain, composePath); err != nil {
+		if err := docker.GenerateComposeFile(toInstall, networkName, cfg.Workspace.Domain, composePath); err != nil {
 			return fmt.Errorf("generate compose: %w", err)
 		}
 		fmt.Printf("✓ Generated docker-compose at %s\n", composePath)
+
+		fmt.Println("\n📦 Pulling images...")
+		if err := docker.PullImages(toInstall); err != nil {
+			return fmt.Errorf("pull images: %w", err)
+		}
 
 		fmt.Println("\n🚀 Deploying services...")
 		if err := docker.Deploy(composePath); err != nil {
@@ -132,24 +167,37 @@ var installCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(installCmd)
 	installCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show plan without making changes")
+	installCmd.Flags().BoolVar(&autoYes, "yes", false, "Skip confirmation prompt")
 }
 
 func waitForService(name string, timeout time.Duration) bool {
 	deadline := time.Now().Add(timeout)
 	servicePorts := map[string]int{
-		"authentik": 9000,
-		"gitea":     3000,
-		"coolify":   8000,
-		"ollama":    11434,
-		"opencode":  30081,
-		"openwebui": 3001,
+		"authentik":   9000,
+		"gitea":       3000,
+		"coolify":     3000,
+		"ollama":      11434,
+		"opencode":    30081,
+		"openwebui":   8080,
+		"code-server": 8443,
+		"plane":       8080,
+		"outline":     3000,
+		"mattermost":  8065,
+		"grafana":     3000,
+		"prometheus":  9090,
 	}
 	serviceAPIs := map[string]string{
-		"authentik": "http://localhost:9000",
-		"gitea":     "http://localhost:3000/api/healthz",
-		"coolify":   "http://localhost:8000/api/v1/health",
-		"ollama":    "http://localhost:11434/api/tags",
-		"openwebui": "http://localhost:3001",
+		"authentik":   "http://localhost:9000",
+		"gitea":       "http://localhost:3000/api/healthz",
+		"coolify":     "http://localhost:3000/api/v1/health",
+		"ollama":      "http://localhost:11434/api/tags",
+		"openwebui":   "http://localhost:8080",
+		"code-server": "http://localhost:8443/healthz",
+		"plane":       "http://localhost:8080/api/v1/health",
+		"outline":     "http://localhost:3000/api/health",
+		"mattermost":  "http://localhost:8065/api/v4/system/health",
+		"grafana":     "http://localhost:3000/api/health",
+		"prometheus":  "http://localhost:9090/-/healthy",
 	}
 
 	for time.Now().Before(deadline) {

@@ -53,8 +53,8 @@ var uninstallCmd = &cobra.Command{
 		}
 
 		if removeNetwork {
-			fmt.Println("🌐 Removing network 'vpsik'...")
-			if err := docker.RemoveNetwork("vpsik"); err != nil {
+			fmt.Println("🌐 Removing network 'workspace_net'...")
+			if err := docker.RemoveNetwork("workspace_net"); err != nil {
 				return fmt.Errorf("remove network: %w", err)
 			}
 		}
@@ -71,5 +71,5 @@ var uninstallCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(uninstallCmd)
 	uninstallCmd.Flags().BoolVar(&removeVolumes, "volumes", false, "Remove persistent volumes")
-	uninstallCmd.Flags().BoolVar(&removeNetwork, "network", false, "Remove the vpsik network")
+	uninstallCmd.Flags().BoolVar(&removeNetwork, "network", false, "Remove the workspace network")
 }

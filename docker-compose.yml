@@ -1,15 +1,27 @@
 version: "3.8"
 
 networks:
-  vpsik:
-    name: vpsik
+  workspace_net:
+    name: workspace_net
     external: false
 
 volumes:
   postgres-data:
+  redis-data:
+  authentik-media:
+  authentik-certs:
+  gitea-data:
+  ollama-data:
+  openwebui-data:
+  codeserver-data:
+  mattermost-data:
+  outline-data:
+  coolify-data:
+  opencode-data:
+  restic-data:
   grafana-data:
   prometheus-data:
-  restic-data:
+  traefik-data:
 
 x-logging: &default-logging
   driver: "json-file"
@@ -22,7 +34,6 @@ services:
     image: traefik:v3.0
     container_name: vpsik-traefik
     command:
-      - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
@@ -32,13 +43,16 @@ services:
       - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-data:/etc/traefik
     networks:
-      - vpsik
+      - workspace_net
     logging: *default-logging
 
   postgres:
     image: postgres:16-alpine
     container_name: vpsik-postgres
+    expose:
+      - "5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-vpsik}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vpsik}
@@ -46,7 +60,18 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
-      - vpsik
+      - workspace_net
+    logging: *default-logging
+
+  redis:
+    image: redis:7-alpine
+    container_name: vpsik-redis
+    expose:
+      - "6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - workspace_net
     logging: *default-logging
 
   workspace-api:
@@ -54,8 +79,8 @@ services:
       context: ./workspace-api
       dockerfile: Dockerfile
     container_name: vpsik-api
-    ports:
-      - "8081:8081"
+    expose:
+      - "8081"
     environment:
       API_PORT: "8081"
       API_JWT_SECRET: ${API_JWT_SECRET:-change-me-in-production}
@@ -69,52 +94,68 @@ services:
       SERVICES_OPENCODE_URL: ${OPENCODE_URL:-}
       SERVICES_OPENCODE_TOKEN: ${OPENCODE_TOKEN:-}
       SERVICES_RESTIC_REPO_URL: ${RESTIC_REPO:-/data/restic}
-      SERVICES_RESTIC_PASSWORD: ${RESTIC_PASSWORD:-vpsik}
+      SERVICES_RESTIC_PASSWORD: ${RESTIC_PASSWORD:-}
     volumes:
       - restic-data:/data/restic
     networks:
-      - vpsik
+      - workspace_net
     depends_on:
       - postgres
     logging: *default-logging
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`${VPSIK_DOMAIN:-workspace.vpsik.com}`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.services.api.loadbalancer.server.port=8081"
 
   workspace-dashboard:
     build:
       context: ./workspace-dashboard
       dockerfile: Dockerfile
     container_name: vpsik-dashboard
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     environment:
       NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8081}
-      NEXT_PUBLIC_OPENWEBUI_URL: ${PUBLIC_OPENWEBUI_URL:-http://localhost:3001}
+      NEXT_PUBLIC_OPENWEBUI_URL: ${PUBLIC_OPENWEBUI_URL:-http://openwebui:8080}
     networks:
-      - vpsik
+      - workspace_net
     depends_on:
       - workspace-api
     logging: *default-logging
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`${VPSIK_DOMAIN:-workspace.vpsik.com}`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.services.dashboard.loadbalancer.server.port=3000"
 
   grafana:
     image: grafana/grafana:latest
     container_name: vpsik-grafana
-    ports:
-      - "3002:3000"
+    expose:
+      - "3000"
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
     volumes:
       - grafana-data:/var/lib/grafana
     networks:
-      - vpsik
+      - workspace_net
     logging: *default-logging
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`metrics.${VPSIK_DOMAIN:-workspace.vpsik.com}`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
   prometheus:
     image: prom/prometheus:latest
     container_name: vpsik-prometheus
-    ports:
-      - "9090:9090"
+    expose:
+      - "9090"
     volumes:
       - prometheus-data:/prometheus
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
     networks:
-      - vpsik
+      - workspace_net
     logging: *default-logging

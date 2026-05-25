@@ -45,6 +45,7 @@ func main() {
 	})
 
 	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
+	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
 	mux.Handle("GET /api/auth/verify", protected(http.HandlerFunc(authHandler.Verify)))
 	mux.Handle("GET /api/status", protected(http.HandlerFunc(statusHandler.Status)))
 
@@ -82,7 +83,7 @@ func main() {
 
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 
-	h := middleware.CORS(middleware.Logging(mux))
+	h := middleware.CORS(cfg.Server.CORSOrigin)(middleware.Logging(mux))
 
 	server := &http.Server{
 		Addr:        addr,

@@ -1,26 +1,46 @@
 server:
-  port: 8080
+  port: 8081
   host: "0.0.0.0"
 
 auth:
   jwt_secret: "change-this-to-a-secure-secret-at-least-32-chars"
-
   users:
     - username: admin
       password_hash: "$2a$10$9zkr.i7ScFQNyg5oM2tKAe5f0/ZeXYHadMfdNiChHn2WSj.NV.xQu"
 
 services:
   gitea:
-    url: "http://localhost:3000"
+    url: "http://gitea:3000"
     token: ""
 
   coolify:
-    url: "http://localhost:8000"
+    url: "http://coolify:3000"
     token: ""
 
   ollama:
-    url: "http://localhost:11434"
+    url: "http://ollama:11434"
 
   opencode:
     url: ""
+    token: ""
+
+  restic:
+    binary: "restic"
+    repo_url: "/data/restic"
+    password: ""
+
+  code-server:
+    url: "http://codeserver:8443"
+    token: ""
+
+  plane:
+    url: "http://plane:8080"
+    token: ""
+
+  outline:
+    url: "http://outline:3000"
+    token: ""
+
+  mattermost:
+    url: "http://mattermost:8065"
     token: ""

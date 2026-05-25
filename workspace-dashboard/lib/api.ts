@@ -29,25 +29,17 @@ export interface OllamaModel {
   modified_at: string
 }
 
-function getToken(): string | null {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem('vpsik_token')
-}
-
-export function authHeaders(): Record<string, string> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+function fetchOpts(): RequestInit {
+  return {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
   }
-  const token = getToken()
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-  return headers
 }
 
 export async function login(username: string, password: string): Promise<string> {
   const res = await fetch(`${API_BASE}/api/auth/login`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password }),
   })
@@ -58,20 +50,17 @@ export async function login(username: string, password: string): Promise<string>
   }
 
   const data = await res.json()
-  localStorage.setItem('vpsik_token', data.token)
   localStorage.setItem('vpsik_user', data.username)
   return data.token
 }
 
 export async function verify(): Promise<boolean> {
-  const res = await fetch(`${API_BASE}/api/auth/verify`, {
-    headers: authHeaders(),
-  })
+  const res = await fetch(`${API_BASE}/api/auth/verify`, fetchOpts())
   return res.ok
 }
 
 export async function logout(): Promise<void> {
-  localStorage.removeItem('vpsik_token')
+  await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {})
   localStorage.removeItem('vpsik_user')
 }
 
@@ -81,17 +70,13 @@ export function getUser(): string | null {
 }
 
 export async function getStatus(): Promise<StatusResponse> {
-  const res = await fetch(`${API_BASE}/api/status`, {
-    headers: authHeaders(),
-  })
+  const res = await fetch(`${API_BASE}/api/status`, fetchOpts())
   if (!res.ok) throw new Error('failed to fetch status')
   return res.json()
 }
 
 export async function getGiteaRepos(): Promise<GiteaRepo[]> {
-  const res = await fetch(`${API_BASE}/api/gitea/repos`, {
-    headers: authHeaders(),
-  })
+  const res = await fetch(`${API_BASE}/api/gitea/repos`, fetchOpts())
   if (!res.ok) throw new Error('failed to fetch repos')
   return res.json()
 }
@@ -122,25 +107,19 @@ export interface CoolifyApplication {
 }
 
 export async function getCoolifyProjects(): Promise<CoolifyProject[]> {
-  const res = await fetch(`${API_BASE}/api/coolify/projects`, {
-    headers: authHeaders(),
-  })
+  const res = await fetch(`${API_BASE}/api/coolify/projects`, fetchOpts())
   if (!res.ok) throw new Error('failed to fetch projects')
   return res.json()
 }
 
 export async function getCoolifyEnvironments(projectUUID: string): Promise<CoolifyEnvironment[]> {
-  const res = await fetch(`${API_BASE}/api/coolify/projects/${projectUUID}/environments`, {
-    headers: authHeaders(),
-  })
+  const res = await fetch(`${API_BASE}/api/coolify/projects/${projectUUID}/environments`, fetchOpts())
   if (!res.ok) throw new Error('failed to fetch environments')
   return res.json()
 }
 
 export async function getCoolifyApplications(projectUUID: string, envName: string): Promise<CoolifyApplication[]> {
-  const res = await fetch(`${API_BASE}/api/coolify/projects/${projectUUID}/environments/${envName}/applications`, {
-    headers: authHeaders(),
-  })
+  const res = await fetch(`${API_BASE}/api/coolify/projects/${projectUUID}/environments/${envName}/applications`, fetchOpts())
   if (!res.ok) throw new Error('failed to fetch applications')
   return res.json()
 }
@@ -148,7 +127,7 @@ export async function getCoolifyApplications(projectUUID: string, envName: strin
 export async function deployCoolifyResource(resourceUUID: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/coolify/deploy`, {
     method: 'POST',
-    headers: authHeaders(),
+    ...fetchOpts(),
     body: JSON.stringify({ resource_uuid: resourceUUID }),
   })
   if (!res.ok) throw new Error('deploy failed')
@@ -157,16 +136,14 @@ export async function deployCoolifyResource(resourceUUID: string): Promise<void>
 export async function restartCoolifyResource(resourceUUID: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/coolify/restart`, {
     method: 'POST',
-    headers: authHeaders(),
+    ...fetchOpts(),
     body: JSON.stringify({ resource_uuid: resourceUUID }),
   })
   if (!res.ok) throw new Error('restart failed')
 }
 
 export async function getCoolifyDeploymentLogs(deploymentID: string): Promise<string> {
-  const res = await fetch(`${API_BASE}/api/coolify/deployments/${deploymentID}/logs`, {
-    headers: authHeaders(),
-  })
+  const res = await fetch(`${API_BASE}/api/coolify/deployments/${deploymentID}/logs`, fetchOpts())
   if (!res.ok) throw new Error('failed to fetch logs')
   const data = await res.json()
   return data.logs
@@ -175,9 +152,7 @@ export async function getCoolifyDeploymentLogs(deploymentID: string): Promise<st
 // ─── Ollama ──────────────────────────────────────────────────────
 
 export async function getOllamaModels(): Promise<OllamaModel[]> {
-  const res = await fetch(`${API_BASE}/api/ollama/models`, {
-    headers: authHeaders(),
-  })
+  const res = await fetch(`${API_BASE}/api/ollama/models`, fetchOpts())
   if (!res.ok) throw new Error('failed to fetch models')
   return res.json()
 }
@@ -193,7 +168,8 @@ export async function chatOllamaStream(
 
   fetch(`${API_BASE}/api/ollama/chat`, {
     method: 'POST',
-    headers: { ...authHeaders(), Accept: 'text/event-stream' },
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
     body: JSON.stringify({ model, messages, stream: true }),
     signal: controller.signal,
   }).then(async (res) => {
@@ -254,7 +230,7 @@ export async function chatOllamaStream(
 export async function pullOllamaModel(model: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/ollama/pull`, {
     method: 'POST',
-    headers: authHeaders(),
+    ...fetchOpts(),
     body: JSON.stringify({ model }),
   })
   if (!res.ok) {
@@ -266,7 +242,7 @@ export async function pullOllamaModel(model: string): Promise<void> {
 export async function deleteOllamaModel(model: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/ollama/models/${encodeURIComponent(model)}`, {
     method: 'DELETE',
-    headers: authHeaders(),
+    ...fetchOpts(),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'delete failed' }))
@@ -277,7 +253,7 @@ export async function deleteOllamaModel(model: string): Promise<void> {
 export async function runOllamaTask(model: string, task: string, content: string): Promise<string> {
   const res = await fetch(`${API_BASE}/api/ollama/task`, {
     method: 'POST',
-    headers: authHeaders(),
+    ...fetchOpts(),
     body: JSON.stringify({ model, task, content }),
   })
   if (!res.ok) throw new Error('task failed')
@@ -290,7 +266,7 @@ export async function runOllamaTask(model: string, task: string, content: string
 export async function openCodeChat(message: string, context?: string, repoPath?: string): Promise<string> {
   const res = await fetch(`${API_BASE}/api/opencode/chat`, {
     method: 'POST',
-    headers: authHeaders(),
+    ...fetchOpts(),
     body: JSON.stringify({ message, context, repo_path: repoPath }),
   })
   if (!res.ok) throw new Error('opencode chat failed')
@@ -319,7 +295,7 @@ export interface ResticBackupStats {
 }
 
 export async function getResticSnapshots(): Promise<ResticSnapshot[]> {
-  const res = await fetch(`${API_BASE}/api/restic/snapshots`, { headers: authHeaders() })
+  const res = await fetch(`${API_BASE}/api/restic/snapshots`, fetchOpts())
   if (!res.ok) throw new Error('failed to fetch snapshots')
   return res.json()
 }
@@ -327,7 +303,7 @@ export async function getResticSnapshots(): Promise<ResticSnapshot[]> {
 export async function createResticBackup(paths: string[], tags?: string[]): Promise<ResticBackupStats> {
   const res = await fetch(`${API_BASE}/api/restic/backup`, {
     method: 'POST',
-    headers: authHeaders(),
+    ...fetchOpts(),
     body: JSON.stringify({ paths, tags }),
   })
   if (!res.ok) throw new Error('backup failed')
@@ -337,7 +313,7 @@ export async function createResticBackup(paths: string[], tags?: string[]): Prom
 export async function restoreResticSnapshot(snapshotID: string, target: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/restic/restore`, {
     method: 'POST',
-    headers: authHeaders(),
+    ...fetchOpts(),
     body: JSON.stringify({ snapshot_id: snapshotID, target }),
   })
   if (!res.ok) throw new Error('restore failed')
@@ -346,19 +322,19 @@ export async function restoreResticSnapshot(snapshotID: string, target: string):
 export async function forgetResticSnapshots(keepLast: number, tags?: string[]): Promise<void> {
   const res = await fetch(`${API_BASE}/api/restic/forget`, {
     method: 'POST',
-    headers: authHeaders(),
+    ...fetchOpts(),
     body: JSON.stringify({ keep_last: keepLast, tags }),
   })
   if (!res.ok) throw new Error('forget failed')
 }
 
 export async function checkResticRepo(): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/restic/check`, { headers: authHeaders() })
+  const res = await fetch(`${API_BASE}/api/restic/check`, fetchOpts())
   if (!res.ok) throw new Error('restic check failed')
 }
 
 export async function getResticStats(): Promise<Record<string, unknown>> {
-  const res = await fetch(`${API_BASE}/api/restic/stats`, { headers: authHeaders() })
+  const res = await fetch(`${API_BASE}/api/restic/stats`, fetchOpts())
   if (!res.ok) throw new Error('failed to fetch restic stats')
   return res.json()
 }

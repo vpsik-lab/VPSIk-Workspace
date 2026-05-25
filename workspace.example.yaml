@@ -2,12 +2,44 @@ workspace:
   domain: workspace.vpsik.com
 
 services:
+  # Infrastructure
+  traefik: true
+  postgres: true
+  redis: true
+  cloudflare: false
+
+  # Identity
   authentik: true
+
+  # Development
   gitea: true
-  coolify: true
   ollama: true
-  opencode: true
   openwebui: true
+  code-server: true
+
+  # Collaboration
+  mattermost: false
+  outline: false
+  plane: false
+
+  # Deployment
+  coolify: true
+  opencode: false
+
+  # Backup & Monitoring
   restic: true
-  traefik: false
-  postgres: false
+  grafana: true
+  prometheus: true
+
+backup:
+  repository: /opt/workspace/backups
+  schedule: "0 3 * * *"
+  keep-policy: "7d 4w 12m"
+
+network:
+  name: workspace_net
+  proxy-port: 443
+  use-tunnel: false
+
+system:
+  install-path: /opt/workspace

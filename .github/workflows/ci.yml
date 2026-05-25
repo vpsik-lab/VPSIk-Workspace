@@ -20,9 +20,17 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: workspace-installer/go.sum
-      - run: go build -o vpsik .
+      - run: go vet ./...
         working-directory: workspace-installer
       - run: go test ./...
+        working-directory: workspace-installer
+      - run: go build -o vpsik .
+        working-directory: workspace-installer
+      - name: Test init --auto
+        run: ./vpsik init --auto --domain test.local --output /tmp/test-config.yaml
+        working-directory: workspace-installer
+      - name: Verify generated config
+        run: test -f /tmp/test-config.yaml && head -5 /tmp/test-config.yaml
         working-directory: workspace-installer
 
   api:
@@ -34,9 +42,11 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: workspace-api/go.sum
-      - run: go build -o workspace-api .
-        working-directory: workspace-api
       - run: go vet ./...
+        working-directory: workspace-api
+      - run: go test ./...
+        working-directory: workspace-api
+      - run: go build -o workspace-api .
         working-directory: workspace-api
 
   dashboard:
@@ -60,3 +70,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker compose build
+
+  lint-installer:
+    name: lint-installer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: workspace-installer

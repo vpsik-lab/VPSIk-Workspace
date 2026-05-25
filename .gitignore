@@ -7,3 +7,7 @@ workspace-dashboard/.next/
 workspace-api/workspace-api
 workspace-dashboard/package-lock.json
 workspace-installer/vpsik
+*.local.yaml
+workspace-state.json
+dist/
+*.tar.gz

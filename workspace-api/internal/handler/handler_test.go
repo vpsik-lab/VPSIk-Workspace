@@ -126,11 +126,18 @@ func TestNewClients_NilOpenCode(t *testing.T) {
 			Gitea:   config.ServiceEndpoint{URL: "http://gitea:3000"},
 			Coolify: config.ServiceEndpoint{URL: "http://coolify:3000"},
 			Ollama:  config.ServiceEndpoint{URL: "http://ollama:11434"},
+			CodeServer: config.ServiceEndpoint{},
+			Plane:      config.ServiceEndpoint{},
+			Outline:    config.ServiceEndpoint{},
+			Mattermost: config.ServiceEndpoint{},
 		},
 	}
 
 	clients := NewClients(cfg)
 	if clients.OpenCode != nil {
 		t.Error("expected nil opencode client when URL is empty")
+	}
+	if clients.CodeServer == nil {
+		t.Error("expected codeserver client even with empty URL")
 	}
 }

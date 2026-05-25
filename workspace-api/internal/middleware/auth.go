@@ -12,22 +12,33 @@ type contextKey string
 
 const UsernameKey contextKey = "username"
 
+func extractToken(r *http.Request) string {
+	header := r.Header.Get("Authorization")
+	if header != "" {
+		parts := strings.SplitN(header, " ", 2)
+		if len(parts) == 2 && parts[0] == "Bearer" {
+			return parts[1]
+		}
+	}
+
+	cookie, err := r.Cookie("vpsik_token")
+	if err == nil && cookie.Value != "" {
+		return cookie.Value
+	}
+
+	return ""
+}
+
 func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			header := r.Header.Get("Authorization")
-			if header == "" {
-				http.Error(w, `{"error":"missing authorization header"}`, http.StatusUnauthorized)
+			token := extractToken(r)
+			if token == "" {
+				http.Error(w, `{"error":"missing authorization"}`, http.StatusUnauthorized)
 				return
 			}
 
-			parts := strings.SplitN(header, " ", 2)
-			if len(parts) != 2 || parts[0] != "Bearer" {
-				http.Error(w, `{"error":"invalid authorization format"}`, http.StatusUnauthorized)
-				return
-			}
-
-			claims, err := auth.ValidateToken(jwtSecret, parts[1])
+			claims, err := auth.ValidateToken(jwtSecret, token)
 			if err != nil {
 				http.Error(w, `{"error":"invalid or expired token"}`, http.StatusUnauthorized)
 				return

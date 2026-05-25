@@ -55,6 +55,10 @@ func (h *StatusHandler) Status(w http.ResponseWriter, r *http.Request) {
 		{"coolify", h.clients.Coolify.CheckHealth},
 		{"ollama", h.clients.Ollama.CheckHealth},
 		{"restic", h.clients.Restic.CheckHealth},
+		{"code-server", h.clients.CodeServer.CheckHealth},
+		{"plane", h.clients.Plane.CheckHealth},
+		{"outline", h.clients.Outline.CheckHealth},
+		{"mattermost", h.clients.Mattermost.CheckHealth},
 	}
 
 	if h.clients.OpenCode != nil {

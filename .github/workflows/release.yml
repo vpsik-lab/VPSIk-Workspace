@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workspace-installer
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: workspace-installer/go.sum
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Build for linux/amd64
+        run: GOOS=linux GOARCH=amd64 go build -o vpsik-linux-amd64 .
+
+      - name: Build for linux/arm64
+        run: GOOS=linux GOARCH=arm64 go build -o vpsik-linux-arm64 .
+
+      - name: Build for darwin/amd64
+        run: GOOS=darwin GOARCH=amd64 go build -o vpsik-darwin-amd64 .
+
+      - name: Build for darwin/arm64
+        run: GOOS=darwin GOARCH=arm64 go build -o vpsik-darwin-arm64 .
+
+      - name: Generate checksums
+        run: sha256sum vpsik-* > checksums.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            workspace-installer/vpsik-linux-amd64
+            workspace-installer/vpsik-linux-arm64
+            workspace-installer/vpsik-darwin-amd64
+            workspace-installer/vpsik-darwin-arm64
+            workspace-installer/checksums.txt
+          body: |
+            ## VPSIk Workspace v${{ github.ref_name }}
+
+            ### Installation
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/vpsik-lab/VPSIk-Workspace/main/install.sh | bash
+            ```
+
+            ### Changes
+            See the commit log for details.

@@ -1,0 +1,223 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  VPSIk Workspace — One-Command Installer                    ║
+# ║  Usage: curl -fsSL https://raw.githubusercontent.com/       ║
+# ║    vpsik-lab/VPSIk-Workspace/main/install.sh | bash         ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+APP="VPSIk Workspace"
+INSTALL_DIR="/opt/workspace"
+BIN_DIR="/usr/local/bin"
+REPO="vpsik-lab/VPSIk-Workspace"
+BRANCH="main"
+VERSION="latest"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+log()  { echo -e "${GREEN}✓${NC} $1"; }
+warn() { echo -e "${YELLOW}⚠${NC} $1"; }
+err()  { echo -e "${RED}❌${NC} $1"; }
+info() { echo -e "${BLUE}ℹ${NC} $1"; }
+
+# Parse flags
+DOMAIN=""
+DRY_RUN=false
+VERBOSE=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --domain)    DOMAIN="$2"; shift 2 ;;
+    --dry-run)   DRY_RUN=true; shift ;;
+    --verbose)   VERBOSE=true; shift ;;
+    --help|-h)   echo "Usage: $0 [--domain DOMAIN] [--dry-run] [--verbose]"; exit 0 ;;
+    *)           warn "Unknown option: $1"; shift ;;
+  esac
+done
+
+echo ""
+echo -e "${BLUE}╔════════════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║    ${APP} Installer v0.1           ║${NC}"
+echo -e "${BLUE}╚════════════════════════════════════════════╝${NC}"
+echo ""
+
+# ── Prerequisites ──────────────────────────────────────────
+
+info "Checking prerequisites..."
+
+# Check curl
+if ! command -v curl &>/dev/null; then
+  err "curl is required. Install it first."
+  exit 1
+fi
+log "curl available"
+
+# Check git
+if ! command -v git &>/dev/null; then
+  warn "git not found — will use direct download"
+fi
+
+# ── Docker ─────────────────────────────────────────────────
+
+if command -v docker &>/dev/null; then
+  log "Docker: $(docker --version 2>/dev/null || echo 'installed')"
+else
+  warn "Docker not found"
+  if [ "$DRY_RUN" = false ]; then
+    info "Installing Docker..."
+    curl -fsSL https://get.docker.com | sh
+    sudo usermod -aG docker "$USER" 2>/dev/null || true
+    log "Docker installed"
+  else
+    info "Would install Docker"
+  fi
+fi
+
+# ── Docker Compose ─────────────────────────────────────────
+
+if docker compose version &>/dev/null; then
+  log "Docker Compose: $(docker compose version --short 2>/dev/null || echo 'installed')"
+elif docker-compose --version &>/dev/null; then
+  warn "legacy docker-compose found — install plugin"
+else
+  warn "Docker Compose not found"
+  if [ "$DRY_RUN" = false ]; then
+    info "Installing Docker Compose plugin..."
+    DOCKER_CONFIG="${DOCKER_CONFIG:-$HOME/.docker}"
+    mkdir -p "$DOCKER_CONFIG/cli-plugins"
+    curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
+      -o "$DOCKER_CONFIG/cli-plugins/docker-compose"
+    chmod +x "$DOCKER_CONFIG/cli-plugins/docker-compose"
+    log "Docker Compose installed"
+  fi
+fi
+
+# ── Create directories ─────────────────────────────────────
+
+if [ "$DRY_RUN" = false ]; then
+  info "Creating directory structure..."
+  sudo mkdir -p "$INSTALL_DIR"/{compose,configs/{traefik,cloudflared,prometheus,grafana/dashboards},data,backups,scripts}
+  sudo chown -R "$USER:$USER" "$INSTALL_DIR" 2>/dev/null || true
+  log "Directory structure created at $INSTALL_DIR"
+else
+  info "Would create directory structure at $INSTALL_DIR"
+fi
+
+# ── Download vpsik binary ──────────────────────────────────
+
+if [ "$DRY_RUN" = false ]; then
+  info "Downloading vpsik binary..."
+  OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+  ARCH=$(uname -m)
+  case "$ARCH" in
+    x86_64)  ARCH="amd64" ;;
+    aarch64) ARCH="arm64" ;;
+    armv7l)  ARCH="armv7" ;;
+  esac
+
+  BINARY_URL="https://github.com/$REPO/releases/latest/download/vpsik-${OS}-${ARCH}"
+  if curl -fsSL "$BINARY_URL" -o /tmp/vpsik 2>/dev/null; then
+    chmod +x /tmp/vpsik
+    sudo mv /tmp/vpsik "$BIN_DIR/vpsik"
+    log "vpsik binary installed to $BIN_DIR/vpsik"
+  else
+    # Fallback: build from source
+    warn "Binary download failed, building from source..."
+    if command -v go &>/dev/null; then
+      TMPDIR=$(mktemp -d)
+      git clone --depth 1 "https://github.com/$REPO.git" "$TMPDIR"
+      cd "$TMPDIR/workspace-installer"
+      go build -o vpsik .
+      sudo mv vpsik "$BIN_DIR/vpsik"
+      rm -rf "$TMPDIR"
+      log "vpsik built and installed to $BIN_DIR/vpsik"
+    else
+      err "Go not available and binary download failed. Install Go or download manually."
+      exit 1
+    fi
+  fi
+else
+  info "Would download vpsik binary"
+fi
+
+# ── Run vpsik doctor ───────────────────────────────────────
+
+if [ "$DRY_RUN" = false ] && command -v vpsik &>/dev/null; then
+  info "Running system health check..."
+  if [ "$VERBOSE" = true ]; then
+    vpsik doctor --fix
+  else
+    vpsik doctor --fix 2>&1 | grep -E '(✅|⚠|❌|error|Error)' || true
+  fi
+  log "System health check complete"
+else
+  info "Would run: vpsik doctor --fix"
+fi
+
+# ── Generate config ────────────────────────────────────────
+
+if [ "$DRY_RUN" = false ] && command -v vpsik &>/dev/null; then
+  info "Generating workspace configuration..."
+
+  SERVICES_ARGS=""
+  if [ -n "$DOMAIN" ]; then
+    VPSIK_DOMAIN="$DOMAIN"
+  else
+    VPSIK_DOMAIN="workspace.vpsik.com"
+  fi
+
+  # Use --auto for silent generation
+  cd "$INSTALL_DIR"
+  vpsik init --auto --domain "$VPSIK_DOMAIN" --output "$INSTALL_DIR/workspace.yaml" $SERVICES_ARGS
+  log "Configuration generated for domain $VPSIK_DOMAIN"
+else
+  info "Would generate config for domain ${DOMAIN:-workspace.vpsik.com}"
+fi
+
+# ── Install ────────────────────────────────────────────────
+
+if [ "$DRY_RUN" = false ] && command -v vpsik &>/dev/null; then
+  info "Deploying services..."
+  cd "$INSTALL_DIR"
+  vpsik install --yes --config "$INSTALL_DIR/workspace.yaml"
+  log "Services deployed"
+else
+  info "Would run: vpsik install --yes"
+fi
+
+# ── Summary ────────────────────────────────────────────────
+
+echo ""
+echo -e "${BLUE}╔════════════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║    Installation Complete! 🎉              ║${NC}"
+echo -e "${BLUE}╚════════════════════════════════════════════╝${NC}"
+echo ""
+
+DOMAIN="${DOMAIN:-workspace.vpsik.com}"
+
+echo "  Dashboard:   https://$DOMAIN"
+echo "  API:         https://api.$DOMAIN"
+echo "  Gitea:       https://git.$DOMAIN"
+echo "  Ollama:      https://ollama.$DOMAIN"
+echo "  OpenWebUI:   https://chat.$DOMAIN"
+echo "  Code Server: https://code.$DOMAIN"
+echo "  Metrics:     https://metrics.$DOMAIN"
+echo ""
+echo "  Config:      $INSTALL_DIR/workspace.yaml"
+echo "  Data:        $INSTALL_DIR/data/"
+echo "  Backups:     $INSTALL_DIR/backups/"
+echo ""
+
+if [ "$DRY_RUN" = true ]; then
+  warn "Dry-run mode — no changes were made."
+fi
+
+info "Run 'vpsik status' to check service health."
+info "Run 'vpsik backup --all' to create first backup."
+echo ""
