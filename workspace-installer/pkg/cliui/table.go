@@ -43,7 +43,7 @@ func (t *Table) Render() string {
 
 	// Header
 	sep := "╭"
-	for i, w := range widths {
+	for _, w := range widths {
 		sep += strings.Repeat("─", w)
 		sep += "┬"
 	}
@@ -60,7 +60,7 @@ func (t *Table) Render() string {
 
 	// Separator
 	sep = "├"
-	for i, w := range widths {
+	for _, w := range widths {
 		sep += strings.Repeat("─", w)
 		sep += "┼"
 	}
@@ -84,7 +84,7 @@ func (t *Table) Render() string {
 
 	// Footer
 	sep = "╰"
-	for i, w := range widths {
+	for _, w := range widths {
 		sep += strings.Repeat("─", w)
 		sep += "┴"
 	}

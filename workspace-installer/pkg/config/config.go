@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
