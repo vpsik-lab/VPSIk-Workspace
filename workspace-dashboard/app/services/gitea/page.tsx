@@ -1,12 +1,44 @@
-'use client'
+"use client"
 
-import { useEffect, useState } from 'react'
-import Sidebar from '@/components/Sidebar'
-import UserMenu from '@/components/UserMenu'
-import ProtectedPage from '@/components/ProtectedPage'
-import { ListSkeleton } from '@/components/LoadingSkeleton'
-import { useAuth } from '@/lib/auth-context'
-import { getGiteaRepos, GiteaRepo, API_BASE } from '@/lib/api'
+import { useEffect, useState } from "react"
+import DashboardLayout from "@/components/DashboardLayout"
+import { getGiteaRepos, API_BASE, type GiteaRepo } from "@/lib/api"
+import { ListSkeleton } from "@/components/LoadingSkeleton"
+import { FadeIn, StaggerItem } from "@/components/motion-wrapper"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+  GitBranch,
+  Plus,
+  Star,
+  GitFork,
+  ExternalLink,
+} from "lucide-react"
 
 interface WebhookForm {
   repo: string
@@ -15,137 +47,164 @@ interface WebhookForm {
 }
 
 export default function GiteaPage() {
-  const { user, authenticated, logout } = useAuth()
   const [repos, setRepos] = useState<GiteaRepo[]>([])
   const [loading, setLoading] = useState(true)
-  const [showWebhook, setShowWebhook] = useState(false)
-  const [webhook, setWebhook] = useState<WebhookForm>({ repo: '', url: '', secret: '' })
-  const [webhookMsg, setWebhookMsg] = useState('')
+  const [webhookOpen, setWebhookOpen] = useState(false)
+  const [webhook, setWebhook] = useState<WebhookForm>({ repo: "", url: "", secret: "" })
+  const [webhookMsg, setWebhookMsg] = useState("")
 
   useEffect(() => {
-    if (!authenticated) return
     getGiteaRepos()
       .then(setRepos)
-      .catch(err => console.error('failed to fetch repos', err))
+      .catch((err) => console.error("failed to fetch repos", err))
       .finally(() => setLoading(false))
-  }, [authenticated])
+  }, [])
 
   async function handleCreateWebhook(e: React.FormEvent) {
     e.preventDefault()
-    setWebhookMsg('')
+    setWebhookMsg("")
     try {
       const res = await fetch(`${API_BASE}/api/gitea/webhooks`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           repo: webhook.repo,
           url: webhook.url,
           secret: webhook.secret,
-          events: ['push', 'pull_request'],
+          events: ["push", "pull_request"],
         }),
       })
-      if (!res.ok) throw new Error('webhook creation failed')
-      setWebhookMsg('✅ Webhook created')
-      setShowWebhook(false)
+      if (!res.ok) throw new Error("webhook creation failed")
+      setWebhookMsg("✅ Webhook created")
+      setWebhookOpen(false)
     } catch (err: unknown) {
       setWebhookMsg(`❌ ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
   return (
-    <ProtectedPage>
-      <div className="min-h-screen bg-gray-950 flex">
-        <Sidebar />
-        <div className="flex-1">
-          <header className="h-16 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-8">
-            <h1 className="text-lg font-semibold text-white">Gitea Repositories</h1>
-            <UserMenu username={user || 'admin'} onLogout={logout} />
-          </header>
-          <main className="p-8">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-gray-300 font-medium">Repositories</h2>
-              <button
-                onClick={() => setShowWebhook(!showWebhook)}
-                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition"
-              >
-                {showWebhook ? 'Close' : '+ Webhook'}
-              </button>
-            </div>
-
-            {showWebhook && (
-              <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
-                <h3 className="text-white font-medium mb-4">Create Webhook</h3>
-                <form onSubmit={handleCreateWebhook} className="space-y-3">
-                  <select
-                    value={webhook.repo}
-                    onChange={(e) => setWebhook({ ...webhook, repo: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 text-gray-200 rounded-lg text-sm"
-                    required
-                  >
-                    <option value="">Select repository</option>
-                    {repos.map(r => (
-                      <option key={r.full_name} value={r.full_name}>{r.full_name}</option>
+    <DashboardLayout
+      title="Gitea"
+      subtitle={`${repos.length} repos`}
+      actions={
+        <Dialog open={webhookOpen} onOpenChange={setWebhookOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Plus className="h-4 w-4 mr-1" />
+              Webhook
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Webhook</DialogTitle>
+              <DialogDescription>
+                Configure a webhook to trigger deployments on push events.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreateWebhook} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Repository</Label>
+                <Select
+                  value={webhook.repo}
+                  onValueChange={(v) => setWebhook({ ...webhook, repo: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select repository" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {repos.map((r) => (
+                      <SelectItem key={r.full_name} value={r.full_name}>
+                        {r.full_name}
+                      </SelectItem>
                     ))}
-                  </select>
-                  <input
-                    type="url"
-                    value={webhook.url}
-                    onChange={(e) => setWebhook({ ...webhook, url: e.target.value })}
-                    placeholder="Webhook URL (e.g., http://coolify:8000/api/v1/deploy)"
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 text-gray-200 rounded-lg text-sm"
-                    required
-                  />
-                  <input
-                    type="text"
-                    value={webhook.secret}
-                    onChange={(e) => setWebhook({ ...webhook, secret: e.target.value })}
-                    placeholder="Secret (optional)"
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 text-gray-200 rounded-lg text-sm"
-                  />
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-vpsik-600 hover:bg-vpsik-500 text-white text-sm rounded-lg transition"
-                  >
-                    Create Webhook
-                  </button>
-                  {webhookMsg && (
-                    <p className="text-sm text-gray-400">{webhookMsg}</p>
-                  )}
-                </form>
+                  </SelectContent>
+                </Select>
               </div>
-            )}
-
-            {loading ? (
-              <ListSkeleton rows={4} />
-            ) : repos.length === 0 ? (
-              <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-                <p className="text-gray-500">No repositories found</p>
+              <div className="space-y-2">
+                <Label>Webhook URL</Label>
+                <Input
+                  type="url"
+                  value={webhook.url}
+                  onChange={(e) => setWebhook({ ...webhook, url: e.target.value })}
+                  placeholder="http://coolify:8000/api/v1/deploy"
+                  required
+                />
               </div>
-            ) : (
-              <div className="grid gap-4">
-                {repos.map((repo) => (
-                  <div key={repo.full_name} className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="text-white font-semibold">{repo.full_name}</h3>
-                        <p className="text-sm text-gray-400 mt-1">{repo.description || 'No description'}</p>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm text-gray-500">
-                        {repo.language && (
-                          <span className="px-2 py-0.5 bg-gray-800 rounded text-xs">{repo.language}</span>
+              <div className="space-y-2">
+                <Label>Secret (optional)</Label>
+                <Input
+                  type="text"
+                  value={webhook.secret}
+                  onChange={(e) => setWebhook({ ...webhook, secret: e.target.value })}
+                  placeholder="your-webhook-secret"
+                />
+              </div>
+              {webhookMsg && (
+                <p className="text-sm text-muted-foreground">{webhookMsg}</p>
+              )}
+              <DialogFooter>
+                <Button type="submit">Create Webhook</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      }
+    >
+      {loading ? (
+        <ListSkeleton rows={6} />
+      ) : repos.length === 0 ? (
+        <FadeIn>
+          <div className="flex items-center justify-center min-h-[40vh]">
+            <div className="text-center space-y-4">
+              <GitBranch className="h-12 w-12 text-muted-foreground/50 mx-auto" />
+              <h3 className="font-semibold">No repositories found</h3>
+              <p className="text-sm text-muted-foreground">
+                Create your first repository in Gitea to get started.
+              </p>
+            </div>
+          </div>
+        </FadeIn>
+      ) : (
+        <div className="grid gap-4">
+          {repos.map((repo, i) => (
+            <StaggerItem key={repo.full_name}>
+              <Card className="hover:border-primary/30 transition-all duration-200">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">{repo.full_name}</h3>
+                        {repo.private && (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                            Private
+                          </Badge>
                         )}
-                        <span>★ {repo.stars_count}</span>
-                        <span>⑂ {repo.forks_count}</span>
                       </div>
+                      <p className="text-sm text-muted-foreground">
+                        {repo.description || "No description"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      {repo.language && (
+                        <Badge variant="outline" className="text-xs">
+                          {repo.language}
+                        </Badge>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Star className="h-3 w-3" /> {repo.stars_count}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <GitFork className="h-3 w-3" /> {repo.forks_count}
+                      </span>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </main>
+                </CardContent>
+              </Card>
+            </StaggerItem>
+          ))}
         </div>
-      </div>
-    </ProtectedPage>
+      )}
+    </DashboardLayout>
   )
 }

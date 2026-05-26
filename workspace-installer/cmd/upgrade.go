@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/vpsik/workspace-installer/pkg/config"
@@ -48,6 +49,12 @@ var upgradeCmd = &cobra.Command{
 		if err := docker.RecreateServices(configPath, cfg.Workspace.Domain); err != nil {
 			return fmt.Errorf("recreate services: %w", err)
 		}
+
+		composeDir := cfg.InstallPath()
+		if composeDir == "" {
+			composeDir = filepath.Dir(configPath)
+		}
+		svcState.Save(filepath.Join(composeDir, "workspace-state.json"))
 
 		fmt.Println("\n✅ Upgrade complete!")
 		return nil

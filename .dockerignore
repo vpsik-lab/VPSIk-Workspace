@@ -10,7 +10,7 @@ node_modules/
 workspace-dashboard/.next/
 workspace-dashboard/node_modules/
 workspace-dashboard/package-lock.json
-workspace-installer/vpsik
+workspace-installer/workspace
 workspace-api/workspace-api
 *.tar.gz
 dist/

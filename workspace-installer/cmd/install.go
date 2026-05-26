@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/vpsik/workspace-installer/pkg/cliui"
 	"github.com/vpsik/workspace-installer/pkg/config"
 	"github.com/vpsik/workspace-installer/pkg/detector"
 	"github.com/vpsik/workspace-installer/pkg/docker"
@@ -33,28 +34,27 @@ var installCmd = &cobra.Command{
 			return fmt.Errorf("load config: %w", err)
 		}
 
-		fmt.Println("🔍 Scanning environment...")
+		spin := cliui.NewSpinner("Scanning environment...")
+		spin.Start()
 		scanResult := scanner.Run()
+		spin.Stop()
 
 		if !scanResult.DockerAvailable {
-			fmt.Println("❌ Docker is required but not available")
-			return fmt.Errorf("docker not available")
+			return fmt.Errorf(cliui.Error("Docker is required but not available"))
 		}
 
 		networkName := cfg.NetworkName()
 
 		if scanResult.CoolifyDetected != nil {
-			fmt.Printf("✓ Coolify detected: %s (port %d)\n",
-				scanResult.CoolifyDetected.Container,
-				scanResult.CoolifyDetected.Port)
-
-			if scanResult.CoolifyDetected.HasProxy {
-				fmt.Println("  ⚠ Coolify is using ports 80/443 — will use internal networking")
+			ci := scanResult.CoolifyDetected
+			fmt.Println(cliui.Success("  Coolify detected: %s (port %d)", ci.Container, ci.Port))
+			if ci.HasProxy {
+				fmt.Println(cliui.Warning("  Coolify is using ports 80/443 — will use internal networking"))
 			}
 		} else {
-			fmt.Println("ℹ Coolify not detected")
+			fmt.Println(cliui.DimText("  Coolify not detected"))
 			if !autoYes {
-				fmt.Print("  Install Coolify? [y/N]: ")
+				fmt.Print(cliui.Highlight("  Install Coolify? [y/N]: "))
 				reader := bufio.NewReader(os.Stdin)
 				response, _ := reader.ReadString('\n')
 				response = strings.TrimSpace(strings.ToLower(response))
@@ -64,41 +64,46 @@ var installCmd = &cobra.Command{
 			}
 		}
 
-		fmt.Println("\n📋 Detecting services...")
+		spin = cliui.NewSpinner("Detecting services...")
+		spin.Start()
 		enabled := cfg.Services.EnabledList()
 		detection := detector.Run(scanResult, enabled)
 		svcState := state.Build(detection)
-
 		installPlan := plan.Build(svcState, enabled)
+		spin.Stop()
 
-		fmt.Printf("\n📊 Plan: %s\n\n", installPlan.Summary())
-
+		fmt.Println(cliui.Header(installPlan.Summary()))
+		tbl := cliui.NewTable([]cliui.Column{
+			{Header: "Action", Width: 10},
+			{Header: "Service", Width: 16},
+			{Header: "Reason"},
+		})
 		for _, item := range installPlan.Items {
-			switch item.Action {
-			case plan.ActionInstall:
-				fmt.Printf("  🔧 %s — %s\n", item.Service, item.Reason)
-			case plan.ActionSkip:
-				fmt.Printf("  ✅ %s — %s\n", item.Service, item.Reason)
+			action := cliui.Success("skip")
+			if item.Action == plan.ActionInstall {
+				action = cliui.Warning("install")
 			}
+			tbl.AddRow(action, item.Service, item.Reason)
 		}
+		tbl.Print()
 
 		if !installPlan.HasChanges() {
-			fmt.Println("\n✅ All services are already installed. Nothing to do.")
+			fmt.Println(cliui.Success("\n  All services already installed. Nothing to do."))
 			return nil
 		}
 
 		if dryRun {
-			fmt.Println("\n🔍 Dry-run mode — no changes applied.")
+			fmt.Println(cliui.DimText("\n  Dry-run mode — no changes applied."))
 			return nil
 		}
 
 		if !autoYes {
-			fmt.Print("\n⚠ Apply this plan? (yes/no): ")
+			fmt.Print(cliui.Warning("\n  Apply this plan? (yes/no): "))
 			reader := bufio.NewReader(os.Stdin)
 			response, _ := reader.ReadString('\n')
 			response = strings.TrimSpace(response)
 			if response != "yes" {
-				fmt.Println("Installation cancelled.")
+				fmt.Println(cliui.DimText("  Installation cancelled."))
 				return nil
 			}
 		}
@@ -110,64 +115,76 @@ var installCmd = &cobra.Command{
 			}
 		}
 
+		spin = cliui.NewSpinner("Setting up network...")
+		spin.Start()
 		if err := docker.EnsureNetwork(networkName); err != nil {
-			return fmt.Errorf("ensure network: %w", err)
+			spin.StopError(err)
+			return err
 		}
-		fmt.Printf("✓ Network '%s' ready\n", networkName)
+		spin.Stop()
 
 		composeDir := cfg.InstallPath()
 		if composeDir == "" {
 			composeDir = filepath.Dir(configPath)
 		}
 		composePath := filepath.Join(composeDir, "compose", "docker-compose.yml")
-
 		envPath := filepath.Join(filepath.Dir(composePath), ".env")
+
+		spin = cliui.NewSpinner("Generating configuration files...")
+		spin.Start()
 		if err := docker.GenerateEnvFile(toInstall, cfg.Workspace.Domain, envPath); err != nil {
-			return fmt.Errorf("generate env: %w", err)
+			spin.StopError(err)
+			return err
 		}
-		fmt.Printf("✓ Generated .env at %s\n", envPath)
-
 		if err := docker.GenerateComposeFile(toInstall, networkName, cfg.Workspace.Domain, composePath); err != nil {
-			return fmt.Errorf("generate compose: %w", err)
+			spin.StopError(err)
+			return err
 		}
-		fmt.Printf("✓ Generated docker-compose at %s\n", composePath)
-
 		apiConfigPath := filepath.Join(composeDir, "api.yaml")
 		adminPassword, err := docker.GenerateAPIConfig(toInstall, cfg.Workspace.Domain, apiConfigPath)
 		if err != nil {
-			return fmt.Errorf("generate api config: %w", err)
+			spin.StopError(err)
+			return err
 		}
-		fmt.Printf("✓ Generated API config at %s\n", apiConfigPath)
-		fmt.Printf("  Admin password: %s\n", adminPassword)
+		spin.Stop()
+		fmt.Println(cliui.Label("API Config", apiConfigPath))
+		fmt.Println(cliui.Label("Admin Password", adminPassword))
 
-		fmt.Println("\n📦 Pulling images...")
+		spin = cliui.NewSpinner("Pulling Docker images...")
+		spin.Start()
 		if err := docker.PullImages(toInstall); err != nil {
-			return fmt.Errorf("pull images: %w", err)
+			spin.StopError(err)
+			return err
 		}
+		spin.Stop()
 
-		fmt.Println("\n🚀 Deploying services...")
+		spin = cliui.NewSpinner("Deploying services...")
+		spin.Start()
 		if err := docker.Deploy(composePath); err != nil {
-			return fmt.Errorf("deploy: %w", err)
+			spin.StopError(err)
+			return err
 		}
+		spin.Stop()
 
-		fmt.Println("\n⏳ Checking service health...")
+		fmt.Println(cliui.DimText("\n  Checking service health..."))
 		for _, name := range toInstall {
-			fmt.Printf("  %s...", name)
+			spin = cliui.NewSpinner(fmt.Sprintf("Waiting for %s...", name))
+			spin.Start()
 			healthy := waitForService(name, 60*time.Second)
 			if healthy {
-				fmt.Println(" ✅")
+				spin.Stop()
 			} else {
-				fmt.Println(" ⚠ not responding yet")
+				spin.Stop()
+				fmt.Println(cliui.Warning("  %s not responding yet", name))
 			}
 		}
 
 		svcState.Save(filepath.Join(composeDir, "workspace-state.json"))
 
-		fmt.Println("\n✅ Installation complete!")
-		fmt.Printf("   Domain: %s\n", cfg.Workspace.Domain)
-		fmt.Println("   Services deployed:")
+		fmt.Println(cliui.Success("\n  Installation complete!"))
+		fmt.Println(cliui.Label("Domain", cfg.Workspace.Domain))
 		for _, name := range toInstall {
-			fmt.Printf("     - %s\n", name)
+			fmt.Println(cliui.Success("  - %s", name))
 		}
 
 		return nil

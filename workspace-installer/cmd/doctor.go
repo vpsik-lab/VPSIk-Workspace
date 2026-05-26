@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/vpsik/workspace-installer/pkg/cliui"
 	"github.com/vpsik/workspace-installer/pkg/scanner"
 )
 
@@ -19,86 +20,78 @@ var doctorCmd = &cobra.Command{
 	Use:   "doctor",
 	Short: "Check system health and fix issues",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("🏥 VPSIk Workspace — System Health Check")
-		fmt.Println(strings.Repeat("─", 40))
+		fmt.Print(cliui.Header("WorkSpace OS — System Health Check"))
 
 		issues := 0
 		fixed := 0
-
 		scan := scanner.Run()
 
+		tbl := cliui.NewTable([]cliui.Column{
+			{Header: "Check", Width: 24},
+			{Header: "Status"},
+			{Header: "Details"},
+		})
+
 		// 1. OS
-		fmt.Printf("  OS: %s/%s\n", runtime.GOOS, runtime.GOARCH)
+		tbl.AddRow("OS", cliui.Success("OK"), fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH))
 
 		// 2. Docker
 		if scan.DockerAvailable {
-			fmt.Printf("  ✅ Docker: %s\n", scan.System.DockerVersion)
+			tbl.AddRow("Docker", cliui.Success("OK"), scan.System.DockerVersion)
 		} else {
-			fmt.Println("  ❌ Docker: not installed")
+			tbl.AddRow("Docker", cliui.Error("FAIL"), "not installed")
 			issues++
-			if autoFix {
-				if fixDocker() {
-					fmt.Println("     ✅ Fixed: Docker installed")
-					fixed++
-				} else {
-					fmt.Println("     ❌ Could not install Docker automatically")
-				}
+			if autoFix && fixDocker() {
+				tbl.AddRow("  → Fix", cliui.Success("FIXED"), "Docker installed")
+				fixed++
 			}
 		}
 
 		// 3. Docker Compose
 		if scan.ComposeAvailable {
-			fmt.Printf("  ✅ Docker Compose: %s\n", scan.System.ComposeVersion)
+			tbl.AddRow("Docker Compose", cliui.Success("OK"), scan.System.ComposeVersion)
 		} else {
-			fmt.Println("  ❌ Docker Compose: not installed")
+			tbl.AddRow("Docker Compose", cliui.Error("FAIL"), "not installed")
 			issues++
-			if autoFix {
-				if fixDockerCompose() {
-					fmt.Println("     ✅ Fixed: Docker Compose installed")
-					fixed++
-				}
+			if autoFix && fixDockerCompose() {
+				tbl.AddRow("  → Fix", cliui.Success("FIXED"), "Docker Compose installed")
+				fixed++
 			}
 		}
 
 		// 4. RAM
 		if scan.System.RAMMB > 0 {
 			if scan.System.RAMMB < 2048 {
-				fmt.Printf("  ⚠ RAM: %d MB (minimum 2048 MB)\n", scan.System.RAMMB)
+				tbl.AddRow("RAM", cliui.Warning("WARN"), fmt.Sprintf("%d MB (min 2048)", scan.System.RAMMB))
 				issues++
 			} else {
-				fmt.Printf("  ✅ RAM: %d MB\n", scan.System.RAMMB)
+				tbl.AddRow("RAM", cliui.Success("OK"), fmt.Sprintf("%d MB", scan.System.RAMMB))
 			}
 		}
 
 		// 5. Disk
 		if scan.System.DiskFreeMB > 0 {
 			if scan.System.DiskFreeMB < 10240 {
-				fmt.Printf("  ⚠ Disk: %d MB free (minimum 10240 MB)\n", scan.System.DiskFreeMB)
+				tbl.AddRow("Disk", cliui.Warning("WARN"), fmt.Sprintf("%d MB free (min 10240)", scan.System.DiskFreeMB))
 				issues++
 			} else {
-				fmt.Printf("  ✅ Disk: %d MB free\n", scan.System.DiskFreeMB)
+				tbl.AddRow("Disk", cliui.Success("OK"), fmt.Sprintf("%d MB free", scan.System.DiskFreeMB))
 			}
 		}
 
 		// 6. Port conflicts
-		criticalPorts := map[int]string{
-			80:   "HTTP (Coolify/Traefik)",
-			443:  "HTTPS (Coolify/Traefik)",
-			3000: "Dashboard/Gitea",
-			8000: "Coolify",
-		}
 		conflicts := 0
-		for port, desc := range criticalPorts {
+		for port, desc := range map[int]string{80: "HTTP", 443: "HTTPS", 3000: "Dashboard", 8000: "Coolify"} {
 			for _, up := range scan.UsedPorts {
 				if up == port {
-					fmt.Printf("  ⚠ Port %d in use: %s\n", port, desc)
+					tbl.AddRow("Port "+fmt.Sprint(port), cliui.Warning("WARN"), desc+" in use")
 					conflicts++
 					break
 				}
 			}
 		}
 		if conflicts == 0 {
-			fmt.Println("  ✅ No port conflicts detected")
+			tbl.AddRow("Port Conflicts", cliui.Success("OK"), "none detected")
 		}
 
 		// 7. Coolify
@@ -108,12 +101,9 @@ var doctorCmd = &cobra.Command{
 			if ci.Running {
 				status = "running"
 			}
-			fmt.Printf("  ✅ Coolify: %s (port %d, %s)\n", ci.Container, ci.Port, status)
-			if ci.HasProxy {
-				fmt.Println("     ⚠ Using ports 80/443 — use Cloudflare Tunnel for VPSIk")
-			}
+			tbl.AddRow("Coolify", cliui.Success("OK"), fmt.Sprintf("%s (port %d, %s)", ci.Container, ci.Port, status))
 		} else {
-			fmt.Println("  ℹ Coolify: not detected")
+			tbl.AddRow("Coolify", cliui.DimText("INFO"), "not detected")
 		}
 
 		// 8. workspace_net
@@ -125,37 +115,36 @@ var doctorCmd = &cobra.Command{
 			}
 		}
 		if netFound {
-			fmt.Println("  ✅ Network: workspace_net exists")
+			tbl.AddRow("Network", cliui.Success("OK"), "workspace_net exists")
 		} else {
-			fmt.Println("  ℹ Network: workspace_net will be created on install")
+			tbl.AddRow("Network", cliui.DimText("INFO"), "will be created on install")
 		}
 
 		// 9. NTP
 		if checkNTP() {
-			fmt.Println("  ✅ NTP: time synchronized")
+			tbl.AddRow("NTP", cliui.Success("OK"), "time synchronized")
 		} else {
-			fmt.Println("  ⚠ NTP: time not synchronized")
+			tbl.AddRow("NTP", cliui.Warning("WARN"), "time not synchronized")
 			issues++
-			if autoFix {
-				if fixNTP() {
-					fmt.Println("     ✅ Fixed: NTP enabled")
-					fixed++
-				}
+			if autoFix && fixNTP() {
+				tbl.AddRow("  → Fix", cliui.Success("FIXED"), "NTP enabled")
+				fixed++
 			}
 		}
 
-		fmt.Println(strings.Repeat("─", 40))
+		tbl.Print()
+
 		if issues == 0 {
-			fmt.Println("✅ All checks passed — system is ready!")
+			fmt.Println(cliui.Success("\n  All checks passed — system is ready!"))
 		} else {
-			fmt.Printf("⚠ Found %d issues", issues)
+			msg := fmt.Sprintf("Found %d issues", issues)
 			if fixed > 0 {
-				fmt.Printf(" (%d fixed)", fixed)
+				msg += fmt.Sprintf(" (%d fixed)", fixed)
 			}
 			if !autoFix {
-				fmt.Print(" — run with --fix to auto-repair")
+				msg += " — run with --fix to auto-repair"
 			}
-			fmt.Println()
+			fmt.Println(cliui.Warning("\n  " + msg))
 		}
 
 		return nil
@@ -163,7 +152,15 @@ var doctorCmd = &cobra.Command{
 }
 
 func fixDocker() bool {
-	fmt.Println("     Installing Docker...")
+	fmt.Println(cliui.Warning("     Installing Docker from get.docker.com..."))
+	fmt.Println(cliui.DimText("     This runs a script from the internet. Verify at https://get.docker.com"))
+	fmt.Print(cliui.Highlight("     Continue? (yes/no): "))
+	var resp string
+	fmt.Scanln(&resp)
+	if resp != "yes" {
+		fmt.Println("     Skipped.")
+		return false
+	}
 	cmd := exec.Command("sh", "-c",
 		"curl -fsSL https://get.docker.com | sh")
 	cmd.Stdout = os.Stdout
@@ -172,11 +169,19 @@ func fixDocker() bool {
 }
 
 func fixDockerCompose() bool {
-	fmt.Println("     Installing Docker Compose plugin...")
+	fmt.Println(cliui.Warning("     Installing Docker Compose plugin..."))
+	fmt.Println(cliui.DimText("     Downloads binary from GitHub releases (no checksum verification)"))
+	fmt.Print(cliui.Highlight("     Continue? (yes/no): "))
+	var resp string
+	fmt.Scanln(&resp)
+	if resp != "yes" {
+		fmt.Println("     Skipped.")
+		return false
+	}
 	cmd := exec.Command("sh", "-c",
 		"DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}; "+
 			"mkdir -p $DOCKER_CONFIG/cli-plugins; "+
-			"curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) "+
+			"curl -fsSL https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) "+
 			"-o $DOCKER_CONFIG/cli-plugins/docker-compose; "+
 			"chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose")
 	cmd.Stdout = os.Stdout

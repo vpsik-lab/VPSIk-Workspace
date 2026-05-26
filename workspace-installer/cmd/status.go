@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/vpsik/workspace-installer/pkg/cliui"
 	"github.com/vpsik/workspace-installer/pkg/config"
 	"github.com/vpsik/workspace-installer/pkg/detector"
 	"github.com/vpsik/workspace-installer/pkg/scanner"
@@ -20,36 +20,38 @@ var statusCmd = &cobra.Command{
 			return fmt.Errorf("load config: %w", err)
 		}
 
-		fmt.Println("🔍 Scanning environment...")
+		spin := cliui.NewSpinner("Scanning environment...")
+		spin.Start()
 		scanResult := scanner.Run()
+		spin.Stop()
 
 		if !scanResult.DockerAvailable {
-			fmt.Println("⚠ Docker is not available")
+			fmt.Println(cliui.Warning("  Docker is not available"))
 		} else {
-			fmt.Printf("✓ Docker available\n")
-			fmt.Printf("  Containers: %d\n", len(scanResult.Containers))
-			fmt.Printf("  Networks: %d\n", len(scanResult.Networks))
+			fmt.Println(cliui.Success("  Docker available"))
+			fmt.Printf("  Containers: %d | Networks: %d\n", len(scanResult.Containers), len(scanResult.Networks))
 		}
 
-		fmt.Println("\n📋 Detecting services...")
+		spin = cliui.NewSpinner("Detecting services...")
+		spin.Start()
 		enabled := cfg.Services.EnabledList()
 		detection := detector.Run(scanResult, enabled)
 		svcState := state.Build(detection)
+		spin.Stop()
 
+		tbl := cliui.NewTable([]cliui.Column{
+			{Header: "Service", Width: 16},
+			{Header: "Status", Width: 12},
+			{Header: "Details"},
+		})
 		for _, s := range svcState.Services {
-			icon := "❌"
+			status := cliui.Error("✗ missing")
 			if s.Status == detector.StatusInstalled {
-				icon = "✅"
+				status = cliui.Success("✓ installed")
 			}
-			fmt.Printf("  %s %s: %s\n", icon, s.Name, s.Details)
+			tbl.AddRow(s.Name, status, s.Details)
 		}
-
-		if len(scanResult.Errors) > 0 {
-			fmt.Println("\n⚠ Errors:")
-			for _, err := range scanResult.Errors {
-				fmt.Fprintf(os.Stderr, "  %s\n", err)
-			}
-		}
+		tbl.Print()
 
 		return nil
 	},

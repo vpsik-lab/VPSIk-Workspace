@@ -97,9 +97,9 @@ func runAutoInit() error {
 	fmt.Printf("✅ Configuration written to %s\n", outputPath)
 	fmt.Printf("   Domain: %s\n", domain)
 	fmt.Printf("   Services: %s\n", strings.Join(enabledServices, ", "))
-	fmt.Println("\nRun 'vpsik doctor' to check system health.")
-	fmt.Println("Run 'vpsik plan' to see what needs to be installed.")
-	fmt.Println("Run 'vpsik install --yes' to deploy.")
+	fmt.Println("\nRun 'workspace doctor' to check system health.")
+	fmt.Println("Run 'workspace plan' to see what needs to be installed.")
+	fmt.Println("Run 'workspace install --yes' to deploy.")
 
 	return nil
 }
@@ -107,7 +107,7 @@ func runAutoInit() error {
 func runInteractiveInit() error {
 	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Println("🚀 VPSIk Workspace — Interactive Setup")
+	fmt.Println("🚀 WorkSpace OS — Interactive Setup")
 	fmt.Println(strings.Repeat("─", 40))
 
 	fmt.Print("Domain (e.g., workspace.vpsik.com) [workspace.vpsik.com]: ")
@@ -198,8 +198,8 @@ func runInteractiveInit() error {
 	}
 
 	fmt.Printf("\n✅ Configuration written to %s\n", outputPath)
-	fmt.Println("\nRun 'vpsik plan' to see what needs to be installed.")
-	fmt.Println("Run 'vpsik install' to apply.")
+	fmt.Println("\nRun 'workspace plan' to see what needs to be installed.")
+	fmt.Println("Run 'workspace install' to apply.")
 
 	return nil
 }

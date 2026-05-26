@@ -59,7 +59,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:     "vpsik_token",
+Name: "workspace_token",
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
@@ -76,7 +76,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     "vpsik_token",
+Name: "workspace_token",
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,

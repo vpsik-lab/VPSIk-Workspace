@@ -34,7 +34,7 @@ We will acknowledge your report within 48 hours and provide a timeline for the f
 2. Change default admin password immediately after installation
 3. Use Cloudflare Tunnel to avoid exposing ports 80/443
 4. Keep your VPS OS and Docker up to date
-5. Enable automatic backups via `vpsik backup --all`
+5. Enable automatic backups via `workspace backup --all`
 
 ## Responsible Disclosure
 

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/vpsik/workspace-installer/pkg/cliui"
 	"github.com/vpsik/workspace-installer/pkg/config"
 )
 
@@ -24,10 +25,10 @@ var backupCmd = &cobra.Command{
 	Long: `Backup service data using restic.
 
 Examples:
-  vpsik backup --all              Backup all services
-  vpsik backup gitea postgres     Backup specific services
-  vpsik backup --list             List available snapshots
-  vpsik backup --dry-run          Simulate backup
+  workspace backup --all              Backup all services
+  workspace backup gitea postgres     Backup specific services
+  workspace backup --list             List available snapshots
+  workspace backup --dry-run          Simulate backup
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load(configPath)
@@ -45,12 +46,13 @@ Examples:
 		}
 
 		if backupDryRun {
-			fmt.Println("🔍 Dry-run: would backup the following services:")
-		} else {
-			fmt.Println("💾 Starting backup...")
+			fmt.Println(cliui.Header("Dry-run: would backup the following services:"))
 		}
 
+		spin := cliui.NewSpinner("Ensuring restic repository...")
+		spin.Start()
 		ensureResticRepo(repo, cfg)
+		spin.Stop()
 
 		var services []string
 		if backupAll {
@@ -63,19 +65,20 @@ Examples:
 
 		for _, svc := range services {
 			if backupDryRun {
-				fmt.Printf("  Would backup: %s\n", svc)
+				fmt.Println(cliui.DimText("  Would backup: %s", svc))
 				continue
 			}
-			fmt.Printf("  Backing up %s...", svc)
+			spin = cliui.NewSpinner(fmt.Sprintf("Backing up %s...", svc))
+			spin.Start()
 			if err := backupService(svc, repo); err != nil {
-				fmt.Printf(" ❌ %v\n", err)
+				spin.StopError(err)
 			} else {
-				fmt.Println(" ✅")
+				spin.Stop()
 			}
 		}
 
 		if !backupDryRun {
-			fmt.Println("\n✅ Backup complete")
+			fmt.Println(cliui.Success("\n  Backup complete"))
 		}
 		return nil
 	},
@@ -97,7 +100,7 @@ func backupService(name, repo string) error {
 		"-r", "/data",
 		"backup", "/source",
 		"--tag", name,
-		"--hostname", "vpsik",
+		"--hostname", "workspace",
 	)
 	cmd.Env = os.Environ()
 	pw := os.Getenv("RESTIC_PASSWORD")
@@ -122,12 +125,15 @@ func ensureResticRepo(repo string, cfg *config.WorkspaceConfig) {
 			"restic/restic:latest",
 			"-r", "/data", "init",
 		)
-		password := os.Getenv("RESTIC_PASSWORD")
-		if password == "" {
-			password = "vpsik"
-		}
-		cmd.Env = append(os.Environ(), "RESTIC_PASSWORD="+password)
-		cmd.Run()
+	password := os.Getenv("RESTIC_PASSWORD")
+	if password == "" {
+		fmt.Fprintln(os.Stderr, cliui.Warning("  RESTIC_PASSWORD not set — using generated password"))
+		password = fmt.Sprintf("workspace-%x", time.Now().UnixNano())
+	}
+	cmd.Env = append(os.Environ(), "RESTIC_PASSWORD="+password)
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, cliui.Error("  restic init failed: %v\n"), err)
+	}
 	}
 }
 
@@ -142,7 +148,8 @@ func listSnapshots(repo string) error {
 	)
 	password := os.Getenv("RESTIC_PASSWORD")
 	if password == "" {
-		password = "vpsik"
+		fmt.Fprintln(os.Stderr, cliui.Warning("  RESTIC_PASSWORD not set"))
+		return fmt.Errorf("RESTIC_PASSWORD environment variable is required")
 	}
 	cmd.Env = append(os.Environ(), "RESTIC_PASSWORD="+password)
 	cmd.Stdout = os.Stdout

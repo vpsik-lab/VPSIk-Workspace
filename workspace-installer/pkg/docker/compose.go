@@ -52,9 +52,9 @@ var ServiceTemplates = map[string]*ServiceCompose{
 			"postgres-data:/var/lib/postgresql/data",
 		},
 		EnvVars: map[string]string{
-			"POSTGRES_USER":     "${POSTGRES_USER:-vpsik}",
+			"POSTGRES_USER":     "${POSTGRES_USER:-workspace}",
 			"POSTGRES_PASSWORD": "${POSTGRES_PASSWORD}",
-			"POSTGRES_DB":       "${POSTGRES_DB:-vpsik}",
+			"POSTGRES_DB":       "${POSTGRES_DB:-workspace}",
 		},
 		Network: "workspace_net",
 	},
@@ -73,7 +73,7 @@ var ServiceTemplates = map[string]*ServiceCompose{
 		Image:       "ghcr.io/goauthentik/server:latest",
 		Expose:      []string{"9000"},
 		Network:     "workspace_net",
-		TraefikHost: "auth.${VPSIK_DOMAIN}",
+		TraefikHost: "auth.${WORKSPACE_DOMAIN}",
 		TraefikPort: "9000",
 		DependsOn:   []string{"postgres", "redis"},
 		EnvVars: map[string]string{
@@ -81,9 +81,9 @@ var ServiceTemplates = map[string]*ServiceCompose{
 			"AUTHENTIK_BOOT_PASSWORD":  "${AUTHENTIK_BOOT_PASSWORD}",
 			"AUTHENTIK_REDIS__HOST":    "redis",
 			"AUTHENTIK_POSTGRESQL__HOST": "postgres",
-			"AUTHENTIK_POSTGRESQL__USER": "${POSTGRES_USER:-vpsik}",
-			"AUTHENTIK_POSTGRESQL__PASSWORD": "${POSTGRES_PASSWORD:-vpsik}",
-			"AUTHENTIK_POSTGRESQL__NAME": "${POSTGRES_DB:-vpsik}",
+"AUTHENTIK_POSTGRESQL__USER": "${POSTGRES_USER:-workspace}",
+		"AUTHENTIK_POSTGRESQL__PASSWORD": "${POSTGRES_PASSWORD:-workspace}",
+		"AUTHENTIK_POSTGRESQL__NAME": "${POSTGRES_DB:-workspace}",
 		},
 	},
 	"gitea": {
@@ -92,18 +92,18 @@ var ServiceTemplates = map[string]*ServiceCompose{
 		Expose:      []string{"3000"},
 		Volumes:     []string{"gitea-data:/data"},
 		Network:     "workspace_net",
-		TraefikHost: "git.${VPSIK_DOMAIN}",
+		TraefikHost: "git.${WORKSPACE_DOMAIN}",
 		TraefikPort: "3000",
 		EnvVars: map[string]string{
 			"USER_UID":                  "1000",
 			"USER_GID":                  "1000",
-			"GITEA__server__DOMAIN":     "git.${VPSIK_DOMAIN}",
-			"GITEA__server__ROOT_URL":   "https://git.${VPSIK_DOMAIN}",
+			"GITEA__server__DOMAIN":     "git.${WORKSPACE_DOMAIN}",
+			"GITEA__server__ROOT_URL":   "https://git.${WORKSPACE_DOMAIN}",
 			"GITEA__database__DB_TYPE":  "postgres",
 			"GITEA__database__HOST":     "postgres:5432",
-			"GITEA__database__NAME":     "${POSTGRES_DB:-vpsik}",
-			"GITEA__database__USER":     "${POSTGRES_USER:-vpsik}",
-			"GITEA__database__PASSWD":   "${POSTGRES_PASSWORD:-vpsik}",
+			"GITEA__database__NAME":     "${POSTGRES_DB:-workspace}",
+			"GITEA__database__USER":     "${POSTGRES_USER:-workspace}",
+			"GITEA__database__PASSWD":   "${POSTGRES_PASSWORD:-workspace}",
 		},
 		DependsOn: []string{"postgres"},
 	},
@@ -113,7 +113,7 @@ var ServiceTemplates = map[string]*ServiceCompose{
 		Expose:      []string{"3000"},
 		Volumes:     []string{"coolify-data:/data", "/var/run/docker.sock:/var/run/docker.sock"},
 		Network:     "workspace_net",
-		TraefikHost: "coolify.${VPSIK_DOMAIN}",
+		TraefikHost: "coolify.${WORKSPACE_DOMAIN}",
 		TraefikPort: "3000",
 		EnvVars: map[string]string{
 			"COOLIFY_APP_ID":    "${COOLIFY_APP_ID}",
@@ -126,7 +126,7 @@ var ServiceTemplates = map[string]*ServiceCompose{
 		Expose:      []string{"11434"},
 		Volumes:     []string{"ollama-data:/root/.ollama"},
 		Network:     "workspace_net",
-		TraefikHost: "ollama.${VPSIK_DOMAIN}",
+		TraefikHost: "ollama.${WORKSPACE_DOMAIN}",
 		TraefikPort: "11434",
 	},
 	"opencode": {
@@ -135,7 +135,7 @@ var ServiceTemplates = map[string]*ServiceCompose{
 		Expose:      []string{"30081"},
 		Volumes:     []string{"opencode-data:/data"},
 		Network:     "workspace_net",
-		TraefikHost: "opencode.${VPSIK_DOMAIN}",
+		TraefikHost: "opencode.${WORKSPACE_DOMAIN}",
 		TraefikPort: "30081",
 	},
 	"openwebui": {
@@ -144,7 +144,7 @@ var ServiceTemplates = map[string]*ServiceCompose{
 		Expose:      []string{"8080"},
 		Volumes:     []string{"openwebui-data:/app/backend/data"},
 		Network:     "workspace_net",
-		TraefikHost: "chat.${VPSIK_DOMAIN}",
+		TraefikHost: "chat.${WORKSPACE_DOMAIN}",
 		TraefikPort: "8080",
 		EnvVars: map[string]string{
 			"OLLAMA_BASE_URL": "http://ollama:11434",
@@ -156,7 +156,7 @@ var ServiceTemplates = map[string]*ServiceCompose{
 		Expose:      []string{"8443"},
 		Volumes:     []string{"codeserver-data:/home/coder"},
 		Network:     "workspace_net",
-		TraefikHost: "code.${VPSIK_DOMAIN}",
+		TraefikHost: "code.${WORKSPACE_DOMAIN}",
 		TraefikPort: "8443",
 		EnvVars: map[string]string{
 			"PASSWORD": "${CODESERVER_PASSWORD}",
@@ -168,7 +168,7 @@ var ServiceTemplates = map[string]*ServiceCompose{
 		Image:       "makeplane/plane-app:latest",
 		Expose:      []string{"8080"},
 		Network:     "workspace_net",
-		TraefikHost: "plane.${VPSIK_DOMAIN}",
+		TraefikHost: "plane.${WORKSPACE_DOMAIN}",
 		TraefikPort: "8080",
 		DependsOn:   []string{"postgres", "redis"},
 	},
@@ -178,14 +178,14 @@ var ServiceTemplates = map[string]*ServiceCompose{
 		Expose:      []string{"3000"},
 		Volumes:     []string{"outline-data:/var/lib/outline/data"},
 		Network:     "workspace_net",
-		TraefikHost: "docs.${VPSIK_DOMAIN}",
+		TraefikHost: "docs.${WORKSPACE_DOMAIN}",
 		TraefikPort: "3000",
 		DependsOn:   []string{"postgres", "redis"},
 		EnvVars: map[string]string{
 			"SECRET_KEY":     "${OUTLINE_SECRET_KEY}",
 			"PGSSLMODE":      "disable",
-			"DATABASE_URL":   "postgres://${POSTGRES_USER:-vpsik}:${POSTGRES_PASSWORD:-vpsik}@postgres:5432/${POSTGRES_DB:-vpsik}",
-			"REDIS_URL":      "redis://:${REDIS_PASSWORD:-vpsik}@redis:6379",
+			"DATABASE_URL":   "postgres://${POSTGRES_USER:-workspace}:${POSTGRES_PASSWORD:-workspace}@postgres:5432/${POSTGRES_DB:-workspace}",
+			"REDIS_URL":      "redis://:${REDIS_PASSWORD:-workspace}@redis:6379",
 		},
 	},
 	"mattermost": {
@@ -194,14 +194,14 @@ var ServiceTemplates = map[string]*ServiceCompose{
 		Expose:      []string{"8065"},
 		Volumes:     []string{"mattermost-data:/mattermost/data"},
 		Network:     "workspace_net",
-		TraefikHost: "mattermost.${VPSIK_DOMAIN}",
+		TraefikHost: "mattermost.${WORKSPACE_DOMAIN}",
 		TraefikPort: "8065",
 		DependsOn:   []string{"postgres"},
 		EnvVars: map[string]string{
 			"MM_USERNAME":   "mmuser",
-			"MM_PASSWORD":   "${POSTGRES_PASSWORD:-vpsik}",
-			"MM_DBNAME":     "${POSTGRES_DB:-vpsik}",
-			"MM_SQLSETTINGS_DATASOURCE": "postgres://mmuser:${POSTGRES_PASSWORD:-vpsik}@postgres:5432/${POSTGRES_DB:-vpsik}?sslmode=disable&connect_timeout=10",
+			"MM_PASSWORD":   "${POSTGRES_PASSWORD:-workspace}",
+			"MM_DBNAME":     "${POSTGRES_DB:-workspace}",
+			"MM_SQLSETTINGS_DATASOURCE": "postgres://mmuser:${POSTGRES_PASSWORD:-workspace}@postgres:5432/${POSTGRES_DB:-workspace}?sslmode=disable&connect_timeout=10",
 		},
 	},
 	"grafana": {
@@ -210,7 +210,7 @@ var ServiceTemplates = map[string]*ServiceCompose{
 		Expose:      []string{"3000"},
 		Volumes:     []string{"grafana-data:/var/lib/grafana"},
 		Network:     "workspace_net",
-		TraefikHost: "metrics.${VPSIK_DOMAIN}",
+		TraefikHost: "metrics.${WORKSPACE_DOMAIN}",
 		TraefikPort: "3000",
 		EnvVars: map[string]string{
 			"GF_SECURITY_ADMIN_USER":     "${GRAFANA_USER:-admin}",
@@ -232,24 +232,24 @@ var ServiceTemplates = map[string]*ServiceCompose{
 	},
 	"dashboard": {
 		Name:        "dashboard",
-		Image:       "vpsik-dashboard:latest",
+Image: "workspaceos-dashboard:latest",
 		Expose:      []string{"3000"},
 		Ports:       []string{"3000:3000"},
 		Network:     "workspace_net",
-		TraefikHost: "${VPSIK_DOMAIN}",
+		TraefikHost: "${WORKSPACE_DOMAIN}",
 		TraefikPort: "3000",
 		DependsOn:   []string{"api"},
 	},
 	"api": {
 		Name:        "api",
-		Image:       "vpsik-api:latest",
+Image: "workspaceos-api:latest",
 		Expose:      []string{"8081"},
 		Ports:       []string{"8081:8081"},
-		Volumes:     []string{"/opt/workspace/api.yaml:/etc/vpsik/api.yaml:ro"},
+Volumes: []string{"/opt/workspace/api.yaml:/etc/workspace/api.yaml:ro"},
 		Network:     "workspace_net",
-		TraefikHost: "api.${VPSIK_DOMAIN}",
+		TraefikHost: "api.${WORKSPACE_DOMAIN}",
 		TraefikPort: "8081",
-		Command:     []string{"/etc/vpsik/api.yaml"},
+		Command:     []string{"/etc/workspace/api.yaml"},
 	},
 	"cloudflare": {
 		Name:  "cloudflared",
@@ -259,7 +259,7 @@ var ServiceTemplates = map[string]*ServiceCompose{
 		},
 		Network: "workspace_net",
 		ExtraLabels: map[string]string{
-			"com.docker.compose.managed": "vpsik",
+			"com.docker.compose.managed": "workspace-os",
 		},
 	},
 }
@@ -410,7 +410,7 @@ func GenerateComposeFile(services []string, network string, domain string, outpu
 		return fmt.Errorf("create output dir: %w", err)
 	}
 
-	return os.WriteFile(outputPath, data, 0644)
+	return os.WriteFile(outputPath, data, 0600)
 }
 
 func randomString(length int) string {
@@ -435,7 +435,7 @@ func randomHex(length int) string {
 
 func GenerateEnvFile(services []string, domain string, outputPath string) error {
 	envVars := make(map[string]string)
-	envVars["VPSIK_DOMAIN"] = domain
+	envVars["WORKSPACE_DOMAIN"] = domain
 
 	for _, name := range services {
 		tpl, ok := ServiceTemplates[name]
@@ -476,7 +476,7 @@ func GenerateEnvFile(services []string, domain string, outputPath string) error 
 	}
 	sort.Strings(lines)
 
-	content := "# VPSIk Workspace — Auto-generated environment\n"
+	content := "# WorkSpace OS — Auto-generated environment\n"
 	content += "# Generated for domain: " + domain + "\n\n"
 	content += strings.Join(lines, "\n") + "\n"
 
@@ -484,7 +484,7 @@ func GenerateEnvFile(services []string, domain string, outputPath string) error 
 		return fmt.Errorf("create output dir: %w", err)
 	}
 
-	return os.WriteFile(outputPath, []byte(content), 0644)
+	return os.WriteFile(outputPath, []byte(content), 0600)
 }
 
 func GenerateAPIConfig(services []string, domain string, outputPath string) (string, error) {
@@ -564,7 +564,7 @@ func GenerateAPIConfig(services []string, domain string, outputPath string) (str
 		return "", fmt.Errorf("create output dir: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, data, 0644); err != nil {
+	if err := os.WriteFile(outputPath, data, 0600); err != nil {
 		return "", fmt.Errorf("write api config: %w", err)
 	}
 
@@ -688,7 +688,7 @@ func PullImages(services []string) error {
 
 func RecreateServices(configPath, domain string) error {
 	composeDir := filepath.Dir(configPath)
-	composePath := filepath.Join(composeDir, "docker-compose.generated.yml")
+	composePath := filepath.Join(composeDir, "compose", "docker-compose.yml")
 
 	absPath, err := filepath.Abs(composePath)
 	if err != nil {

@@ -24,9 +24,9 @@ var restoreCmd = &cobra.Command{
 	Long: `Restore service data from restic snapshots.
 
 Examples:
-  vpsik restore gitea --latest          Restore latest gitea backup
-  vpsik restore postgres --snapshot ID  Restore specific snapshot
-  vpsik restore --list                  List available snapshots
+  workspace restore gitea --latest          Restore latest gitea backup
+  workspace restore postgres --snapshot ID  Restore specific snapshot
+  workspace restore --list                  List available snapshots
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load(configPath)
@@ -82,7 +82,7 @@ func restoreLatestSnapshot(service, target, repo string) error {
 		"restore", "latest",
 		"--tag", service,
 		"--target", "/restore",
-		"--host", "vpsik",
+		"--host", "workspace",
 	)
 	cmd.Env = os.Environ()
 	if pw := os.Getenv("RESTIC_PASSWORD"); pw != "" {

@@ -63,7 +63,7 @@ func TestAuthHandler_Login_Success(t *testing.T) {
 	cookies := resp.Cookies()
 	foundCookie := false
 	for _, c := range cookies {
-		if c.Name == "vpsik_token" {
+		if c.Name == "workspace_token" {
 			foundCookie = true
 			if !c.HttpOnly {
 				t.Error("expected HttpOnly cookie")
@@ -160,7 +160,7 @@ func TestAuthHandler_Logout(t *testing.T) {
 	cookies := resp.Cookies()
 	found := false
 	for _, c := range cookies {
-		if c.Name == "vpsik_token" && c.MaxAge < 0 {
+		if c.Name == "workspace_token" && c.MaxAge < 0 {
 			found = true
 			break
 		}

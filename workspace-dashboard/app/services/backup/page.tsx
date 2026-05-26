@@ -1,247 +1,210 @@
-'use client'
+"use client"
 
-import { useEffect, useState, useRef } from 'react'
-import Sidebar from '@/components/Sidebar'
-import UserMenu from '@/components/UserMenu'
-import ProtectedPage from '@/components/ProtectedPage'
-import { ListSkeleton } from '@/components/LoadingSkeleton'
-import { useAuth } from '@/lib/auth-context'
+import { useState } from "react"
+import DashboardLayout from "@/components/DashboardLayout"
+import { ListSkeleton } from "@/components/LoadingSkeleton"
+import { FadeIn, StaggerItem } from "@/components/motion-wrapper"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
 import {
-  getResticSnapshots, createResticBackup, restoreResticSnapshot,
-  forgetResticSnapshots, checkResticRepo, getResticStats,
-  ResticSnapshot, ResticBackupStats,
-} from '@/lib/api'
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
-}
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  HardDrive,
+  Shield,
+  Trash2,
+  RefreshCw,
+  RotateCcw,
+  Clock,
+  Tag,
+} from "lucide-react"
+import { toast } from "sonner"
+import {
+  useResticSnapshots,
+  useCreateBackup,
+  useRestoreSnapshot,
+  useForgetSnapshots,
+  useCheckRestic,
+} from "@/lib/hooks"
 
 export default function BackupPage() {
-  const { user, authenticated, logout } = useAuth()
-  const [snapshots, setSnapshots] = useState<ResticSnapshot[]>([])
-  const [loading, setLoading] = useState(true)
-  const [running, setRunning] = useState<string | null>(null)
-  const [backupPaths, setBackupPaths] = useState('/data')
-  const [backupTags, setBackupTags] = useState('')
-  const [restoreTarget, setRestoreTarget] = useState('/restore')
+  const [backupPaths, setBackupPaths] = useState("/data")
+  const [backupTags, setBackupTags] = useState("")
+  const [restoreTarget, setRestoreTarget] = useState("/restore")
   const [forgetKeep, setForgetKeep] = useState(7)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  function showMsg(type: 'success' | 'error', text: string) {
-    setMessage({ type, text })
-    if (timerRef.current) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => setMessage(null), 5000)
-  }
+  const { data: snapshots, isLoading } = useResticSnapshots()
+  const backupMut = useCreateBackup()
+  const restoreMut = useRestoreSnapshot()
+  const forgetMut = useForgetSnapshots()
+  const checkMut = useCheckRestic()
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
-    }
-  }, [])
-
-  async function loadSnapshots() {
-    try {
-      const data = await getResticSnapshots()
-      setSnapshots(data)
-    } catch (err: unknown) {
-      const e = err instanceof Error ? err.message : 'failed'
-      showMsg('error', e)
-    }
-  }
-
-  useEffect(() => {
-    if (!authenticated) return
-    loadSnapshots().finally(() => setLoading(false))
-  }, [authenticated])
+  const running = backupMut.isPending || forgetMut.isPending || checkMut.isPending
 
   async function handleBackup() {
-    setRunning('backup')
     try {
-      const paths = backupPaths.split(',').map(s => s.trim()).filter(Boolean)
-      const tags = backupTags.split(',').map(s => s.trim()).filter(Boolean)
-      await createResticBackup(paths, tags.length > 0 ? tags : undefined)
-      showMsg('success', 'Backup completed')
-      loadSnapshots()
+      const paths = backupPaths.split(",").map((s) => s.trim()).filter(Boolean)
+      const tags = backupTags.split(",").map((s) => s.trim()).filter(Boolean)
+      await backupMut.mutateAsync({ paths, tags: tags.length > 0 ? tags : undefined })
+      toast.success("Backup completed successfully")
     } catch (err: unknown) {
-      const e = err instanceof Error ? err.message : 'failed'
-      showMsg('error', e)
+      toast.error(err instanceof Error ? err.message : "Backup failed")
     }
-    setRunning(null)
   }
 
   async function handleRestore(snapshotID: string) {
-    setRunning(snapshotID)
     try {
-      await restoreResticSnapshot(snapshotID, restoreTarget)
-      showMsg('success', `Restore of ${snapshotID} started`)
+      await restoreMut.mutateAsync({ snapshotID, target: restoreTarget })
+      toast.success(`Restore of ${snapshotID} started`)
     } catch (err: unknown) {
-      const e = err instanceof Error ? err.message : 'failed'
-      showMsg('error', e)
+      toast.error(err instanceof Error ? err.message : "Restore failed")
     }
-    setRunning(null)
   }
 
   async function handleForget() {
-    setRunning('forget')
     try {
-      await forgetResticSnapshots(forgetKeep)
-      showMsg('success', 'Old snapshots pruned')
-      loadSnapshots()
+      await forgetMut.mutateAsync({ keepLast: forgetKeep })
+      toast.success("Old snapshots pruned")
     } catch (err: unknown) {
-      const e = err instanceof Error ? err.message : 'failed'
-      showMsg('error', e)
+      toast.error(err instanceof Error ? err.message : "Prune failed")
     }
-    setRunning(null)
   }
 
   async function handleCheck() {
-    setRunning('check')
     try {
-      await checkResticRepo()
-      showMsg('success', 'Repository check passed')
+      await checkMut.mutateAsync()
+      toast.success("Repository check passed")
     } catch (err: unknown) {
-      const e = err instanceof Error ? err.message : 'failed'
-      showMsg('error', e)
+      toast.error(err instanceof Error ? err.message : "Check failed")
     }
-    setRunning(null)
   }
 
   return (
-    <ProtectedPage>
-      <div className="min-h-screen bg-gray-950 flex">
-        <Sidebar />
-        <div className="flex-1">
-          <header className="h-16 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-8">
-            <h1 className="text-lg font-semibold text-white">Backup & Recovery</h1>
-            <UserMenu username={user || 'admin'} onLogout={logout} />
-          </header>
-          <main className="p-8 space-y-6">
-            {message && (
-              <div className={`px-4 py-3 rounded-lg text-sm ${
-                message.type === 'success' ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'
-              }`}>
-                {message.text}
+    <DashboardLayout title="Backup & Recovery" subtitle={`${snapshots?.length ?? 0} snapshots`}>
+      <FadeIn>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <HardDrive className="h-4 w-4 text-primary" />
+                Create Backup
+              </CardTitle>
+              <CardDescription>Back up your workspace data</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <Label className="text-xs">Paths (comma separated)</Label>
+                <Input value={backupPaths} onChange={(e) => setBackupPaths(e.target.value)} size={1} />
               </div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-                <h2 className="text-white font-semibold mb-4">Create Backup</h2>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs text-gray-500 uppercase">Paths (comma separated)</label>
-                    <input
-                      value={backupPaths}
-                      onChange={e => setBackupPaths(e.target.value)}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 uppercase">Tags (optional)</label>
-                    <input
-                      value={backupTags}
-                      onChange={e => setBackupTags(e.target.value)}
-                      placeholder="daily,production"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 mt-1"
-                    />
-                  </div>
-                  <button
-                    onClick={handleBackup}
-                    disabled={running === 'backup'}
-                    className="w-full px-4 py-2 bg-vpsik-600 hover:bg-vpsik-500 disabled:bg-gray-700 text-white text-sm rounded-lg transition"
-                  >
-                    {running === 'backup' ? 'Running...' : 'Start Backup'}
-                  </button>
-                </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Tags (optional)</Label>
+                <Input value={backupTags} onChange={(e) => setBackupTags(e.target.value)} placeholder="daily,production" />
               </div>
+              <Button onClick={handleBackup} disabled={backupMut.isPending} className="w-full">
+                <HardDrive className="h-4 w-4 mr-2" />
+                {backupMut.isPending ? "Running..." : "Start Backup"}
+              </Button>
+            </CardContent>
+          </Card>
 
-              <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-                <h2 className="text-white font-semibold mb-4">Prune Snapshots</h2>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs text-gray-500 uppercase">Keep Last</label>
-                    <input
-                      type="number"
-                      value={forgetKeep}
-                      onChange={e => setForgetKeep(Number(e.target.value))}
-                      min={1}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 mt-1"
-                    />
-                  </div>
-                  <button
-                    onClick={handleForget}
-                    disabled={running === 'forget'}
-                    className="w-full px-4 py-2 bg-yellow-700 hover:bg-yellow-600 disabled:bg-gray-700 text-white text-sm rounded-lg transition"
-                  >
-                    {running === 'forget' ? 'Pruning...' : 'Prune Old Snapshots'}
-                  </button>
-                </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Trash2 className="h-4 w-4 text-amber-500" />
+                Prune Snapshots
+              </CardTitle>
+              <CardDescription>Remove old backups to save space</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <Label className="text-xs">Keep Last</Label>
+                <Input type="number" value={forgetKeep} onChange={(e) => setForgetKeep(Number(e.target.value))} min={1} />
               </div>
+              <Button onClick={handleForget} disabled={forgetMut.isPending} variant="secondary" className="w-full">
+                <Trash2 className="h-4 w-4 mr-2" />
+                {forgetMut.isPending ? "Pruning..." : "Prune Old Snapshots"}
+              </Button>
+            </CardContent>
+          </Card>
 
-              <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-                <h2 className="text-white font-semibold mb-4">Maintenance</h2>
-                <div className="space-y-3">
-                  <button
-                    onClick={handleCheck}
-                    disabled={running === 'check'}
-                    className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 text-gray-200 text-sm rounded-lg transition"
-                  >
-                    {running === 'check' ? 'Checking...' : 'Check Repository'}
-                  </button>
-                  <div>
-                    <label className="text-xs text-gray-500 uppercase">Restore Target</label>
-                    <input
-                      value={restoreTarget}
-                      onChange={e => setRestoreTarget(e.target.value)}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 mt-1"
-                    />
-                  </div>
-                </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Shield className="h-4 w-4 text-emerald-500" />
+                Maintenance
+              </CardTitle>
+              <CardDescription>Verify backup integrity</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button onClick={handleCheck} disabled={checkMut.isPending} variant="outline" className="w-full">
+                <RefreshCw className={`h-4 w-4 mr-2 ${checkMut.isPending ? "animate-spin" : ""}`} />
+                {checkMut.isPending ? "Checking..." : "Check Repository"}
+              </Button>
+              <div className="space-y-2">
+                <Label className="text-xs">Restore Target</Label>
+                <Input value={restoreTarget} onChange={(e) => setRestoreTarget(e.target.value)} />
               </div>
-            </div>
-
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-              <h2 className="text-white font-semibold mb-4">Snapshots ({snapshots.length})</h2>
-              {loading ? (
-                <ListSkeleton rows={3} />
-              ) : snapshots.length === 0 ? (
-                <p className="text-gray-500 text-sm">No snapshots found. Create your first backup above.</p>
-              ) : (
-                <div className="space-y-3">
-                  {snapshots.map(snap => (
-                    <div key={snap.id} className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-white font-mono text-sm">{snap.short_id}</span>
-                          <span className="text-gray-400 text-xs">{new Date(snap.time).toLocaleString()}</span>
-                          {snap.tags?.map(t => (
-                            <span key={t} className="px-2 py-0.5 bg-vpsik-900/50 text-vpsik-400 rounded text-xs">{t}</span>
-                          ))}
-                        </div>
-                        <div className="text-gray-500 text-xs mt-1">
-                          {snap.hostname} — {snap.paths?.join(', ')}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleRestore(snap.short_id)}
-                        disabled={running === snap.short_id}
-                        className="px-3 py-1.5 bg-vpsik-600 hover:bg-vpsik-500 disabled:bg-gray-700 text-white text-xs rounded-lg transition"
-                      >
-                        {running === snap.short_id ? '...' : 'Restore'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </main>
+            </CardContent>
+          </Card>
         </div>
-      </div>
-    </ProtectedPage>
+      </FadeIn>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Snapshots ({snapshots?.length ?? 0})</CardTitle>
+          <CardDescription>Point-in-time backups available for restore</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <ListSkeleton rows={4} />
+          ) : !snapshots || snapshots.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground space-y-3">
+              <HardDrive className="h-8 w-8 mx-auto opacity-50" />
+              <p className="text-sm">No snapshots found. Create your first backup.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {snapshots.map((snap) => (
+                <StaggerItem key={snap.id}>
+                  <Card className="bg-muted/30">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <code className="text-sm font-mono text-primary">{snap.short_id}</code>
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              {new Date(snap.time).toLocaleString()}
+                            </span>
+                            {snap.tags?.map((t) => (
+                              <Badge key={t} variant="secondary" className="text-[10px] gap-1">
+                                <Tag className="h-2 w-2" /> {t}
+                              </Badge>
+                            ))}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {snap.hostname} &mdash; {snap.paths?.join(", ")}
+                          </p>
+                        </div>
+                        <Button size="sm" onClick={() => handleRestore(snap.short_id)} disabled={restoreMut.isPending}>
+                          <RotateCcw className="h-3 w-3 mr-1" />
+                          {restoreMut.isPending ? "..." : "Restore"}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </StaggerItem>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </DashboardLayout>
   )
 }

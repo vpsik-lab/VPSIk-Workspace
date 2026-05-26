@@ -27,30 +27,30 @@ jobs:
         run: go test ./...
 
       - name: Build for linux/amd64
-        run: GOOS=linux GOARCH=amd64 go build -o vpsik-linux-amd64 .
+        run: GOOS=linux GOARCH=amd64 go build -o workspace-linux-amd64 .
 
       - name: Build for linux/arm64
-        run: GOOS=linux GOARCH=arm64 go build -o vpsik-linux-arm64 .
+        run: GOOS=linux GOARCH=arm64 go build -o workspace-linux-arm64 .
 
       - name: Build for darwin/amd64
-        run: GOOS=darwin GOARCH=amd64 go build -o vpsik-darwin-amd64 .
+        run: GOOS=darwin GOARCH=amd64 go build -o workspace-darwin-amd64 .
 
       - name: Build for darwin/arm64
-        run: GOOS=darwin GOARCH=arm64 go build -o vpsik-darwin-arm64 .
+        run: GOOS=darwin GOARCH=arm64 go build -o workspace-darwin-arm64 .
 
       - name: Generate checksums
-        run: sha256sum vpsik-* > checksums.txt
+        run: sha256sum workspace-* > checksums.txt
 
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            workspace-installer/vpsik-linux-amd64
-            workspace-installer/vpsik-linux-arm64
-            workspace-installer/vpsik-darwin-amd64
-            workspace-installer/vpsik-darwin-arm64
+            workspace-installer/workspace-linux-amd64
+            workspace-installer/workspace-linux-arm64
+            workspace-installer/workspace-darwin-amd64
+            workspace-installer/workspace-darwin-arm64
             workspace-installer/checksums.txt
           body: |
-            ## VPSIk Workspace v${{ github.ref_name }}
+            ## WorkSpace OS v${{ github.ref_name }}
 
             ### Installation
             ```bash

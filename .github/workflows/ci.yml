@@ -8,7 +8,7 @@ on:
 
 env:
   GO_VERSION: "1.22"
-  NODE_VERSION: "18"
+  NODE_VERSION: "22"
 
 jobs:
   installer:
@@ -24,10 +24,10 @@ jobs:
         working-directory: workspace-installer
       - run: go test ./...
         working-directory: workspace-installer
-      - run: go build -o vpsik .
+      - run: go build -o workspace .
         working-directory: workspace-installer
       - name: Test init --auto
-        run: ./vpsik init --auto --domain test.local --output /tmp/test-config.yaml
+        run: ./workspace init --auto --domain test.local --output /tmp/test-config.yaml
         working-directory: workspace-installer
       - name: Verify generated config
         run: test -f /tmp/test-config.yaml && head -5 /tmp/test-config.yaml

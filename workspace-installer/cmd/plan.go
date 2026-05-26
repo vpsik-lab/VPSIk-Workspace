@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/vpsik/workspace-installer/pkg/cliui"
 	"github.com/vpsik/workspace-installer/pkg/config"
 	"github.com/vpsik/workspace-installer/pkg/detector"
 	"github.com/vpsik/workspace-installer/pkg/plan"
@@ -20,26 +21,35 @@ var planCmd = &cobra.Command{
 			return fmt.Errorf("load config: %w", err)
 		}
 
-		fmt.Println("🔍 Scanning environment...")
+		spin := cliui.NewSpinner("Scanning environment...")
+		spin.Start()
 		scanResult := scanner.Run()
+		spin.Stop()
 
-		fmt.Println("📋 Detecting services...")
+		spin = cliui.NewSpinner("Detecting services...")
+		spin.Start()
 		enabled := cfg.Services.EnabledList()
 		detection := detector.Run(scanResult, enabled)
 		svcState := state.Build(detection)
-
 		installPlan := plan.Build(svcState, enabled)
+		spin.Stop()
 
-		fmt.Printf("\n📊 Plan: %s\n\n", installPlan.Summary())
+		fmt.Println()
+		fmt.Println(cliui.Header(installPlan.Summary()))
 
+		tbl := cliui.NewTable([]cliui.Column{
+			{Header: "Action", Width: 10},
+			{Header: "Service", Width: 16},
+			{Header: "Reason"},
+		})
 		for _, item := range installPlan.Items {
-			switch item.Action {
-			case plan.ActionInstall:
-				fmt.Printf("  🔧 %s — %s\n", item.Service, item.Reason)
-			case plan.ActionSkip:
-				fmt.Printf("  ✅ %s — %s\n", item.Service, item.Reason)
+			action := cliui.Success("skip")
+			if item.Action == plan.ActionInstall {
+				action = cliui.Warning("install")
 			}
+			tbl.AddRow(action, item.Service, item.Reason)
 		}
+		tbl.Print()
 
 		return nil
 	},

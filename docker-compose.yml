@@ -1,5 +1,3 @@
-version: "3.8"
-
 networks:
   workspace_net:
     name: workspace_net
@@ -29,10 +27,13 @@ x-logging: &default-logging
     max-size: "10m"
     max-file: "3"
 
+x-restart: &default-restart
+  restart: unless-stopped
+
 services:
   traefik:
     image: traefik:v3.0
-    container_name: vpsik-traefik
+    container_name: workspaceos-traefik
     command:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
@@ -47,25 +48,32 @@ services:
     networks:
       - workspace_net
     logging: *default-logging
+    <<: *default-restart
 
   postgres:
     image: postgres:16-alpine
-    container_name: vpsik-postgres
+    container_name: workspaceos-postgres
     expose:
       - "5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-vpsik}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vpsik}
-      POSTGRES_DB: ${POSTGRES_DB:-vpsik}
+      POSTGRES_USER: ${POSTGRES_USER:-workspace}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-workspace}
+      POSTGRES_DB: ${POSTGRES_DB:-workspace}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
       - workspace_net
     logging: *default-logging
+    <<: *default-restart
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-workspace}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: vpsik-redis
+    container_name: workspaceos-redis
     expose:
       - "6379"
     volumes:
@@ -73,12 +81,18 @@ services:
     networks:
       - workspace_net
     logging: *default-logging
+    <<: *default-restart
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   workspace-api:
     build:
       context: ./workspace-api
       dockerfile: Dockerfile
-    container_name: vpsik-api
+    container_name: workspaceos-api
     expose:
       - "8081"
     environment:
@@ -100,11 +114,13 @@ services:
     networks:
       - workspace_net
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     logging: *default-logging
+    <<: *default-restart
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=Host(`${VPSIK_DOMAIN:-workspace.vpsik.com}`)"
+      - "traefik.http.routers.api.rule=Host(`${WORKSPACE_DOMAIN:-workspace.vpsik.com}`)"
       - "traefik.http.routers.api.entrypoints=websecure"
       - "traefik.http.services.api.loadbalancer.server.port=8081"
 
@@ -112,7 +128,7 @@ services:
     build:
       context: ./workspace-dashboard
       dockerfile: Dockerfile
-    container_name: vpsik-dashboard
+    container_name: workspaceos-dashboard
     expose:
       - "3000"
     environment:
@@ -121,17 +137,19 @@ services:
     networks:
       - workspace_net
     depends_on:
-      - workspace-api
+      workspace-api:
+        condition: service_started
     logging: *default-logging
+    <<: *default-restart
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`${VPSIK_DOMAIN:-workspace.vpsik.com}`)"
+      - "traefik.http.routers.dashboard.rule=Host(`${WORKSPACE_DOMAIN:-workspace.vpsik.com}`)"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.services.dashboard.loadbalancer.server.port=3000"
 
   grafana:
-    image: grafana/grafana:latest
-    container_name: vpsik-grafana
+    image: grafana/grafana:11.0.0
+    container_name: workspaceos-grafana
     expose:
       - "3000"
     environment:
@@ -142,15 +160,19 @@ services:
     networks:
       - workspace_net
     logging: *default-logging
+    <<: *default-restart
+    depends_on:
+      postgres:
+        condition: service_healthy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=Host(`metrics.${VPSIK_DOMAIN:-workspace.vpsik.com}`)"
+      - "traefik.http.routers.grafana.rule=Host(`metrics.${WORKSPACE_DOMAIN:-workspace.vpsik.com}`)"
       - "traefik.http.routers.grafana.entrypoints=websecure"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
   prometheus:
-    image: prom/prometheus:latest
-    container_name: vpsik-prometheus
+    image: prom/prometheus:v2.53.0
+    container_name: workspaceos-prometheus
     expose:
       - "9090"
     volumes:
@@ -159,3 +181,4 @@ services:
     networks:
       - workspace_net
     logging: *default-logging
+    <<: *default-restart

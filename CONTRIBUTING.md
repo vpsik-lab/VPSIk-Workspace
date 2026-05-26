@@ -1,4 +1,4 @@
-# Contributing to VPSIk Workspace
+# Contributing to WorkSpace OS
 
 Thank you for your interest! We welcome contributions of all forms.
 
@@ -14,8 +14,8 @@ Thank you for your interest! We welcome contributions of all forms.
 ```bash
 # Installer (Go)
 cd workspace-installer
-go build -o vpsik .
-./vpsik init --auto --domain dev.local
+go build -o workspace .
+./workspace init --auto --domain dev.local
 
 # API (Go)
 cd workspace-api

@@ -20,7 +20,7 @@ func TestExtractToken_FromHeader(t *testing.T) {
 
 func TestExtractToken_FromCookie(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
-	req.AddCookie(&http.Cookie{Name: "vpsik_token", Value: "cookie-token"})
+	req.AddCookie(&http.Cookie{Name: "workspace_token", Value: "cookie-token"})
 
 	token := extractToken(req)
 	if token != "cookie-token" {
@@ -31,7 +31,7 @@ func TestExtractToken_FromCookie(t *testing.T) {
 func TestExtractToken_HeaderTakesPrecedence(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	req.Header.Set("Authorization", "Bearer header-token")
-	req.AddCookie(&http.Cookie{Name: "vpsik_token", Value: "cookie-token"})
+	req.AddCookie(&http.Cookie{Name: "workspace_token", Value: "cookie-token"})
 
 	token := extractToken(req)
 	if token != "header-token" {

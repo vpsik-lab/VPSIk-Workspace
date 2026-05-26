@@ -48,6 +48,7 @@ func main() {
 	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
 	mux.Handle("GET /api/auth/verify", protected(http.HandlerFunc(authHandler.Verify)))
 	mux.Handle("GET /api/status", protected(http.HandlerFunc(statusHandler.Status)))
+	mux.HandleFunc("GET /api/update/check", handler.CheckUpdate)
 
 	mux.Handle("GET /api/gitea/repos", protected(http.HandlerFunc(proxyHandler.GiteaRepos)))
 	mux.Handle("GET /api/gitea/issues", protected(http.HandlerFunc(proxyHandler.GiteaIssues)))

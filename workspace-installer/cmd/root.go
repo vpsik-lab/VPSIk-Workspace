@@ -1,21 +1,27 @@
 package cmd
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
 
+//go:embed VERSION
+var versionFile string
+
 var configPath string
 
 var rootCmd = &cobra.Command{
-	Use:   "vpsik",
-	Short: "VPSIk Workspace Installer",
-	Long: `VPSIk Workspace — AI-native engineering workspace bootstrapper.
+	Use:   "workspace",
+	Short: "WorkSpace OS Installer",
+	Long: `WorkSpace OS — AI-native engineering workspace bootstrapper.
 
 Detects existing services, plans what needs to be installed,
 and reconciles the environment to the desired state.`,
+	Version: strings.TrimSpace(versionFile),
 }
 
 func Execute() {

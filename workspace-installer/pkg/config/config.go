@@ -155,8 +155,3 @@ func (c *WorkspaceConfig) InstallPath() string {
 	return "/opt/workspace"
 }
 
-func ConfigFilename(path string) string {
-	base := strings.TrimSuffix(path, ".yaml")
-	base = strings.TrimSuffix(base, ".yml")
-	return base + ".yaml"
-}

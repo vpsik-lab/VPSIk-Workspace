@@ -19,13 +19,16 @@ var uninstallCmd = &cobra.Command{
 	Use:   "uninstall",
 	Short: "Remove all deployed services",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		_, err := config.Load(configPath)
+		cfg, err := config.Load(configPath)
 		if err != nil {
 			return fmt.Errorf("load config: %w", err)
 		}
 
-		composeDir := filepath.Dir(configPath)
-		composePath := filepath.Join(composeDir, "docker-compose.generated.yml")
+		composeDir := cfg.InstallPath()
+		if composeDir == "" {
+			composeDir = filepath.Dir(configPath)
+		}
+		composePath := filepath.Join(composeDir, "compose", "docker-compose.yml")
 
 		if _, err := os.Stat(composePath); os.IsNotExist(err) {
 			fmt.Println("No generated compose file found. Nothing to uninstall.")

@@ -56,7 +56,7 @@ func TestServiceTemplates_Postgres(t *testing.T) {
 		t.Fatal("expected postgres template")
 	}
 
-	if tmpl.EnvVars["POSTGRES_USER"] != "${POSTGRES_USER:-vpsik}" {
+	if tmpl.EnvVars["POSTGRES_USER"] != "${POSTGRES_USER:-workspace}" {
 		t.Errorf("unexpected POSTGRES_USER: %s", tmpl.EnvVars["POSTGRES_USER"])
 	}
 
@@ -82,8 +82,8 @@ func TestServiceTemplates_Grafana(t *testing.T) {
 		t.Errorf("expected grafana/grafana:latest, got %s", tmpl.Image)
 	}
 
-	if tmpl.TraefikHost != "metrics.${VPSIK_DOMAIN}" {
-		t.Errorf("expected TraefikHost metrics.${VPSIK_DOMAIN}, got %s", tmpl.TraefikHost)
+	if tmpl.TraefikHost != "metrics.${WORKSPACE_DOMAIN}" {
+		t.Errorf("expected TraefikHost metrics.${WORKSPACE_DOMAIN}, got %s", tmpl.TraefikHost)
 	}
 
 	if tmpl.EnvVars["GF_SECURITY_ADMIN_USER"] != "${GRAFANA_USER:-admin}" {
@@ -155,20 +155,20 @@ func TestServiceTemplates_CodeServer(t *testing.T) {
 		t.Error("expected expose 8443")
 	}
 
-	if tmpl.TraefikHost != "code.${VPSIK_DOMAIN}" {
-		t.Errorf("expected TraefikHost code.${VPSIK_DOMAIN}, got %s", tmpl.TraefikHost)
+	if tmpl.TraefikHost != "code.${WORKSPACE_DOMAIN}" {
+		t.Errorf("expected TraefikHost code.${WORKSPACE_DOMAIN}, got %s", tmpl.TraefikHost)
 	}
 }
 
 func TestGenerateTraefikLabels(t *testing.T) {
 	svc := &ServiceCompose{
 		Name:        "gitea",
-		TraefikHost: "git.${VPSIK_DOMAIN}",
+		TraefikHost: "git.${WORKSPACE_DOMAIN}",
 		TraefikPort: "3000",
 	}
 
 	// Labels require env vars to resolve, test struct
-	if svc.TraefikHost != "git.${VPSIK_DOMAIN}" {
+	if svc.TraefikHost != "git.${WORKSPACE_DOMAIN}" {
 		t.Error("expected TraefikHost to be preserved")
 	}
 }

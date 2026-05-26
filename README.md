@@ -1,4 +1,4 @@
-# VPSIk WorkSpace
+# WorkSpace OS
 
 <p align="center">
   <b>AI-Native Engineering Workspace — One-Command Setup for Any VPS.</b>
@@ -94,7 +94,7 @@ workspace_net (isolated Docker network)
 ┌──────────────────────────────────────────────────────┐
 │  Dashboard  (workspace-dashboard / Next.js 14)      │
 │  API Proxy  (workspace-api / Go)                    │
-│  CLI        (workspace-installer / Go — "vpsik")    │
+│  CLI        (workspace-installer / Go — "workspace")    │
 ├──────────────────────────────────────────────────────┤
 │  Authentik  (SSO / Identity Provider)               │
 │  Gitea      (Git hosting)                           │
@@ -150,10 +150,10 @@ curl -fsSL ...install.sh | bash -s -- --dry-run
 1. Checks system (OS, Docker, RAM, Disk)
 2. Installs dependencies if needed (Docker, Compose)
 3. Creates `/opt/workspace/` directory structure
-4. Downloads `vpsik` CLI binary from GitHub Releases
-5. Runs `vpsik doctor --fix` (auto-fix issues)
-6. Runs `vpsik init --auto` (generates config)
-7. Runs `vpsik install --yes` (deploys all services)
+4. Downloads `workspace` CLI binary from GitHub Releases
+5. Runs `workspace doctor --fix` (auto-fix issues)
+6. Runs `workspace init --auto` (generates config)
+7. Runs `workspace install --yes` (deploys all services)
 8. Prints dashboard URLs
 
 ---
@@ -180,10 +180,10 @@ curl -fsSL ...install.sh | bash -s -- --dry-run
 
 ---
 
-## CLI Reference (`vpsik`)
+## CLI Reference (`workspace`)
 
 ```
-Usage:  vpsik [command] [flags]
+Usage:  workspace [command] [flags]
 
 Commands:
   init          Generate workspace configuration
@@ -218,6 +218,7 @@ Commands:
 
 Global Flags:
   --config, -c  Config file path (default: workspace.yaml)
+  --version, -v Show version
 ```
 
 ---
@@ -262,8 +263,8 @@ Global Flags:
 
 ```bash
 # Installer
-cd workspace-installer && go build -o vpsik .
-./vpsik init --auto --domain dev.local
+cd workspace-installer && go build -o workspace .
+./workspace init --auto --domain dev.local
 
 # API
 cd workspace-api && go build -o workspace-api .

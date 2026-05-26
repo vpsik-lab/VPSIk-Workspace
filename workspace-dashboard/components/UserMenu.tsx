@@ -1,6 +1,15 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { LogOut, User } from "lucide-react"
 
 interface UserMenuProps {
   username: string
@@ -8,36 +17,36 @@ interface UserMenuProps {
 }
 
 export default function UserMenu({ username, onLogout }: UserMenuProps) {
-  const [open, setOpen] = useState(false)
-
   return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg transition text-sm"
-      >
-        <div className="w-6 h-6 rounded-full bg-vpsik-600 flex items-center justify-center text-xs font-medium text-white">
-          {username[0].toUpperCase()}
-        </div>
-        <span className="text-gray-200">{username}</span>
-      </button>
-
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-xl shadow-xl z-20 py-1">
-            <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-700">
-              Signed in as <span className="text-gray-300 font-medium">{username}</span>
-            </div>
-            <button
-              onClick={onLogout}
-              className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-gray-700 transition"
-            >
-              Sign out
-            </button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-accent transition-colors text-sm">
+          <Avatar className="h-7 w-7">
+            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+              {username[0].toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-foreground hidden sm:inline">{username}</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel>
+          <div className="flex flex-col">
+            <span>{username}</span>
+            <span className="text-xs text-muted-foreground font-normal">Administrator</span>
           </div>
-        </>
-      )}
-    </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem>
+          <User className="h-4 w-4 mr-2" />
+          Profile
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={onLogout} className="text-destructive focus:text-destructive">
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

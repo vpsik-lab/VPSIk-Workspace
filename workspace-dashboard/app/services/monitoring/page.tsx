@@ -1,89 +1,135 @@
-'use client'
+"use client"
 
-import { useEffect, useState } from 'react'
-import Sidebar from '@/components/Sidebar'
-import UserMenu from '@/components/UserMenu'
-import ProtectedPage from '@/components/ProtectedPage'
-import { ListSkeleton } from '@/components/LoadingSkeleton'
-import { useAuth } from '@/lib/auth-context'
-import { getStatus, ServiceStatus } from '@/lib/api'
-import StatusBadge from '@/components/StatusBadge'
+import DashboardLayout from "@/components/DashboardLayout"
+import StatusBadge from "@/components/StatusBadge"
+import { ListSkeleton } from "@/components/LoadingSkeleton"
+import { FadeIn, StaggerItem } from "@/components/motion-wrapper"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Activity,
+  BarChart3,
+  TrendingUp,
+  ExternalLink,
+  AlertTriangle,
+} from "lucide-react"
+import { useServices } from "@/lib/hooks"
 
-const GRAFANA_URL = process.env.NEXT_PUBLIC_GRAFANA_URL || 'http://localhost:3002'
-const PROMETHEUS_URL = process.env.NEXT_PUBLIC_PROMETHEUS_URL || 'http://localhost:9090'
+const GRAFANA_URL = process.env.NEXT_PUBLIC_GRAFANA_URL || "http://localhost:3002"
+const PROMETHEUS_URL = process.env.NEXT_PUBLIC_PROMETHEUS_URL || "http://localhost:9090"
 
 export default function MonitoringPage() {
-  const { user, authenticated, logout } = useAuth()
-  const [services, setServices] = useState<ServiceStatus[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!authenticated) return
-    getStatus()
-      .then(data => setServices(data.services || []))
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false))
-  }, [authenticated])
+  const { data, isLoading, error } = useServices()
+  const services = data?.services ?? []
+  const healthyCount = services.filter((s) => s.status === "healthy").length
 
   return (
-    <ProtectedPage>
-      <div className="min-h-screen bg-gray-950 flex">
-        <Sidebar />
-        <div className="flex-1">
-          <header className="h-16 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-8">
-            <h1 className="text-lg font-semibold text-white">Monitoring</h1>
-            <UserMenu username={user || 'admin'} onLogout={logout} />
-          </header>
-          <main className="p-8 space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <a
-                href={GRAFANA_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-vpsik-600/50 transition group"
-              >
-                <h2 className="text-white font-semibold text-lg group-hover:text-vpsik-400">Grafana</h2>
-                <p className="text-gray-400 text-sm mt-1">Dashboards, alerts, and metrics visualization</p>
-                <span className="text-vpsik-400 text-xs mt-2 inline-block">Open Grafana →</span>
-              </a>
-              <a
-                href={PROMETHEUS_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-vpsik-600/50 transition group"
-              >
-                <h2 className="text-white font-semibold text-lg group-hover:text-vpsik-400">Prometheus</h2>
-                <p className="text-gray-400 text-sm mt-1">Time-series metrics and alerting rules</p>
-                <span className="text-vpsik-400 text-xs mt-2 inline-block">Open Prometheus →</span>
-              </a>
-            </div>
-
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-              <h2 className="text-white font-semibold mb-4">Service Health</h2>
-              {loading ? (
-                <ListSkeleton rows={5} />
-              ) : error ? (
-                <p className="text-red-400 text-sm">{error}</p>
-              ) : services.length === 0 ? (
-                <p className="text-gray-500 text-sm">No services reported</p>
-              ) : (
-                <div className="space-y-2">
-                  {services.map(svc => (
-                    <div key={svc.name} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
-                      <span className="text-gray-200 text-sm">{svc.name}</span>
-                      <div className="flex items-center gap-2">
-                        <StatusBadge status={svc.status} />
-                        {svc.error && <span className="text-red-400 text-xs">{svc.error}</span>}
-                      </div>
-                    </div>
-                  ))}
+    <DashboardLayout
+      title="Monitoring"
+      subtitle={`${healthyCount}/${services.length} healthy`}
+    >
+      {/* External Links */}
+      <FadeIn>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <a
+            href={GRAFANA_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group"
+          >
+            <Card className="hover:border-primary/30 transition-all duration-200 h-full">
+              <CardContent className="p-6 flex items-start justify-between">
+                <div>
+                  <div className="p-2 rounded-lg bg-primary/5 w-fit mb-3">
+                    <BarChart3 className="h-5 w-5 text-primary" />
+                  </div>
+                  <CardTitle className="text-base group-hover:text-primary transition-colors">
+                    Grafana
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Dashboards, alerts, and metrics visualization
+                  </CardDescription>
                 </div>
-              )}
-            </div>
-          </main>
+                <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors mt-1" />
+              </CardContent>
+            </Card>
+          </a>
+          <a
+            href={PROMETHEUS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group"
+          >
+            <Card className="hover:border-primary/30 transition-all duration-200 h-full">
+              <CardContent className="p-6 flex items-start justify-between">
+                <div>
+                  <div className="p-2 rounded-lg bg-emerald-500/5 w-fit mb-3">
+                    <TrendingUp className="h-5 w-5 text-emerald-500" />
+                  </div>
+                  <CardTitle className="text-base group-hover:text-emerald-500 transition-colors">
+                    Prometheus
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Time-series metrics and alerting rules
+                  </CardDescription>
+                </div>
+                <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-emerald-500 transition-colors mt-1" />
+              </CardContent>
+            </Card>
+          </a>
         </div>
-      </div>
-    </ProtectedPage>
+      </FadeIn>
+
+      {/* Service Health */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Activity className="h-4 w-4 text-primary" />
+            Service Health
+          </CardTitle>
+          <CardDescription>
+            Real-time status of all workspace services
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <ListSkeleton rows={6} />
+          ) : error ? (
+            <div className="flex items-center gap-2 text-destructive text-sm">
+              <AlertTriangle className="h-4 w-4" />
+              Failed to fetch service status
+            </div>
+          ) : services.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground space-y-3">
+              <Activity className="h-8 w-8 mx-auto opacity-50" />
+              <p className="text-sm">No services reported</p>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {services.map((svc, i) => (
+                <StaggerItem key={svc.name}>
+                  <div className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium capitalize">{svc.name}</span>
+                      {svc.error && (
+                        <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                          {svc.error}
+                        </span>
+                      )}
+                    </div>
+                    <StatusBadge status={svc.status} />
+                  </div>
+                </StaggerItem>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </DashboardLayout>
   )
 }

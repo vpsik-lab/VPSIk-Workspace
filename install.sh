@@ -2,12 +2,12 @@
 set -euo pipefail
 
 # ╔══════════════════════════════════════════════════════════════╗
-# ║  VPSIk Workspace — One-Command Installer                    ║
+# ║  WorkSpace OS — One-Command Installer                       ║
 # ║  Usage: curl -fsSL https://raw.githubusercontent.com/       ║
 # ║    vpsik-lab/VPSIk-Workspace/main/install.sh | bash         ║
 # ╚══════════════════════════════════════════════════════════════╝
 
-APP="VPSIk Workspace"
+APP="WorkSpace OS"
 INSTALL_DIR="/opt/workspace"
 BIN_DIR="/usr/local/bin"
 REPO="vpsik-lab/VPSIk-Workspace"
@@ -109,10 +109,10 @@ else
   info "Would create directory structure at $INSTALL_DIR"
 fi
 
-# ── Download vpsik binary ──────────────────────────────────
+# ── Download workspace binary ──────────────────────────────
 
 if [ "$DRY_RUN" = false ]; then
-  info "Downloading vpsik binary..."
+  info "Downloading workspace binary..."
   OS=$(uname -s | tr '[:upper:]' '[:lower:]')
   ARCH=$(uname -m)
   case "$ARCH" in
@@ -121,17 +121,17 @@ if [ "$DRY_RUN" = false ]; then
     armv7l)  ARCH="armv7" ;;
   esac
 
-  BINARY_URL="https://github.com/$REPO/releases/latest/download/vpsik-${OS}-${ARCH}"
-  if curl -fsSL "$BINARY_URL" -o /tmp/vpsik 2>/dev/null; then
-    chmod +x /tmp/vpsik
-    sudo mv /tmp/vpsik "$BIN_DIR/vpsik"
-    log "vpsik binary installed to $BIN_DIR/vpsik"
+  BINARY_URL="https://github.com/$REPO/releases/latest/download/workspace-${OS}-${ARCH}"
+  if curl -fsSL "$BINARY_URL" -o /tmp/workspace 2>/dev/null; then
+    chmod +x /tmp/workspace
+    sudo mv /tmp/workspace "$BIN_DIR/workspace"
+    log "workspace binary installed to $BIN_DIR/workspace"
 
     # Clone source to build Docker images
     BUILD_TMP=$(mktemp -d)
     git clone --depth 1 "https://github.com/$REPO.git" "$BUILD_TMP"
-    docker build --no-cache -t vpsik-api:latest "$BUILD_TMP/workspace-api" 2>&1 | tail -5
-    docker build --no-cache -t vpsik-dashboard:latest "$BUILD_TMP/workspace-dashboard" 2>&1 || true
+    docker build --no-cache -t workspaceos-api:latest "$BUILD_TMP/workspace-api" 2>&1 | tail -5
+    docker build --no-cache -t workspaceos-dashboard:latest "$BUILD_TMP/workspace-dashboard" 2>&1 || true
     rm -rf "$BUILD_TMP"
     log "Local Docker images built"
   else
@@ -141,15 +141,15 @@ if [ "$DRY_RUN" = false ]; then
       TMPDIR=$(mktemp -d)
       git clone --depth 1 "https://github.com/$REPO.git" "$TMPDIR"
       cd "$TMPDIR/workspace-installer"
-      go build -o vpsik .
-      sudo mv vpsik "$BIN_DIR/vpsik"
-      log "vpsik built and installed to $BIN_DIR/vpsik"
+      go build -o workspace .
+      sudo mv workspace "$BIN_DIR/workspace"
+      log "workspace built and installed to $BIN_DIR/workspace"
 
       # Build local Docker images for API and Dashboard
       info "Building workspace-api Docker image..."
-      docker build --no-cache -t vpsik-api:latest "$TMPDIR/workspace-api" 2>&1 | tail -5
+      docker build --no-cache -t workspaceos-api:latest "$TMPDIR/workspace-api" 2>&1 | tail -5
       info "Building workspace-dashboard Docker image..."
-      docker build --no-cache -t vpsik-dashboard:latest "$TMPDIR/workspace-dashboard" 2>&1 || true
+      docker build --no-cache -t workspaceos-dashboard:latest "$TMPDIR/workspace-dashboard" 2>&1 || true
       log "Local Docker images built"
 
       rm -rf "$TMPDIR"
@@ -159,52 +159,52 @@ if [ "$DRY_RUN" = false ]; then
     fi
   fi
 else
-  info "Would download vpsik binary"
+  info "Would download workspace binary"
 fi
 
-# ── Run vpsik doctor ───────────────────────────────────────
+# ── Run workspace doctor ───────────────────────────────────
 
-if [ "$DRY_RUN" = false ] && command -v vpsik &>/dev/null; then
+if [ "$DRY_RUN" = false ] && command -v workspace &>/dev/null; then
   info "Running system health check..."
   if [ "$VERBOSE" = true ]; then
-    vpsik doctor --fix
+    workspace doctor --fix
   else
-    vpsik doctor --fix 2>&1 | grep -E '(✅|⚠|❌|error|Error)' || true
+    workspace doctor --fix 2>&1 | grep -E '(✅|⚠|❌|error|Error)' || true
   fi
   log "System health check complete"
 else
-  info "Would run: vpsik doctor --fix"
+  info "Would run: workspace doctor --fix"
 fi
 
 # ── Generate config ────────────────────────────────────────
 
-if [ "$DRY_RUN" = false ] && command -v vpsik &>/dev/null; then
+if [ "$DRY_RUN" = false ] && command -v workspace &>/dev/null; then
   info "Generating workspace configuration..."
 
   SERVICES_ARGS=""
   if [ -n "$DOMAIN" ]; then
-    VPSIK_DOMAIN="$DOMAIN"
+    WORKSPACE_DOMAIN="$DOMAIN"
   else
-    VPSIK_DOMAIN="workspace.vpsik.com"
+    WORKSPACE_DOMAIN="workspace.vpsik.com"
   fi
 
   # Use --auto for silent generation
   cd "$INSTALL_DIR"
-  vpsik init --auto --domain "$VPSIK_DOMAIN" --output "$INSTALL_DIR/workspace.yaml" $SERVICES_ARGS
-  log "Configuration generated for domain $VPSIK_DOMAIN"
+  workspace init --auto --domain "$WORKSPACE_DOMAIN" --output "$INSTALL_DIR/workspace.yaml" $SERVICES_ARGS
+  log "Configuration generated for domain $WORKSPACE_DOMAIN"
 else
   info "Would generate config for domain ${DOMAIN:-workspace.vpsik.com}"
 fi
 
 # ── Install ────────────────────────────────────────────────
 
-if [ "$DRY_RUN" = false ] && command -v vpsik &>/dev/null; then
+if [ "$DRY_RUN" = false ] && command -v workspace &>/dev/null; then
   info "Deploying services..."
   cd "$INSTALL_DIR"
-  vpsik install --yes --config "$INSTALL_DIR/workspace.yaml"
+  workspace install --yes --config "$INSTALL_DIR/workspace.yaml"
   log "Services deployed"
 else
-  info "Would run: vpsik install --yes"
+  info "Would run: workspace install --yes"
 fi
 
 # ── Detect IP ─────────────────────────────────────────────
@@ -246,6 +246,6 @@ if [ "$DRY_RUN" = true ]; then
   warn "Dry-run mode — no changes were made."
 fi
 
-info "Run 'vpsik status' to check service health."
-info "Run 'vpsik backup --all' to create first backup."
+info "Run 'workspace status' to check service health."
+info "Run 'workspace backup --all' to create first backup."
 echo ""

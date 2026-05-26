@@ -21,7 +21,7 @@ func extractToken(r *http.Request) string {
 		}
 	}
 
-	cookie, err := r.Cookie("vpsik_token")
+	cookie, err := r.Cookie("workspace_token")
 	if err == nil && cookie.Value != "" {
 		return cookie.Value
 	}

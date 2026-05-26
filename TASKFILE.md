@@ -1,4 +1,4 @@
-# VPSIk WorkSpace — Implementation Taskfile
+# WorkSpace OS — Implementation Taskfile
 
 > Standard self-hosted workspace for any VPS.
 > Architecture: isolated Docker network + Traefik + optional Cloudflare Tunnel.
@@ -18,10 +18,10 @@ The open source edition is fully implemented and functional.
 - [x] API proxy server (Go)
 - [x] Dashboard (Next.js 14)
 - [x] `install.sh` bootstrap script
-- [x] `vpsik init --auto` & `vpsik install --yes`
-- [x] `vpsik doctor --fix` system health
-- [x] `vpsik backup` & `vpsik restore` (Restic)
-- [x] `vpsik upgrade` & `vpsik uninstall`
+- [x] `workspace init --auto` & `workspace install --yes`
+- [x] `workspace doctor --fix` system health
+- [x] `workspace backup` & `workspace restore` (Restic)
+- [x] `workspace upgrade` & `workspace uninstall`
 - [x] All service integrations (Authentik, Gitea, Ollama, OpenWebUI, Code-Server, Mattermost, Outline, Plane, Coolify, Grafana, Prometheus)
 - [x] Network isolation via `workspace_net`
 - [x] Env file generation with auto-generated secrets
@@ -32,15 +32,15 @@ The open source edition is fully implemented and functional.
 ### Commands
 
 ```
-vpsik init      Generate configuration (interactive or --auto)
-vpsik plan      Show installation plan
-vpsik install   Deploy services (--yes for silent, --dry-run)
-vpsik status    Show service health
-vpsik doctor    System checks (--fix for auto-repair)
-vpsik upgrade   Pull latest images & recreate
-vpsik uninstall Remove all services (--volumes, --network)
-vpsik backup    Create backups (--all, --dry-run, --list)
-vpsik restore   Restore from snapshots (--latest, --snapshot)
+workspace init      Generate configuration (interactive or --auto)
+workspace plan      Show installation plan
+workspace install   Deploy services (--yes for silent, --dry-run)
+workspace status    Show service health
+workspace doctor    System checks (--fix for auto-repair)
+workspace upgrade   Pull latest images & recreate
+workspace uninstall Remove all services (--volumes, --network)
+workspace backup    Create backups (--all, --dry-run, --list)
+workspace restore   Restore from snapshots (--latest, --snapshot)
 ```
 
 ---

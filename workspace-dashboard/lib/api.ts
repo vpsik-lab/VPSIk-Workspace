@@ -1,3 +1,4 @@
+/** Determine the API base URL — empty in-browser (same-origin), explicit in SSR. */
 function getApiBase(): string {
   if (typeof window !== 'undefined') {
     return ''
@@ -7,17 +8,20 @@ function getApiBase(): string {
 
 export const API_BASE = getApiBase()
 
+/** A single service's health status. */
 export interface ServiceStatus {
   name: string
   status: string
   error?: string
 }
 
+/** Aggregate health response from the API. */
 export interface StatusResponse {
   services: ServiceStatus[]
   timestamp: string
 }
 
+/** A Gitea repository. */
 export interface GiteaRepo {
   name: string
   full_name: string
@@ -29,6 +33,7 @@ export interface GiteaRepo {
   updated_at: string
 }
 
+/** An Ollama model. */
 export interface OllamaModel {
   name: string
   size: number
@@ -36,6 +41,7 @@ export interface OllamaModel {
   modified_at: string
 }
 
+/** Shared fetch options for authenticated API calls. */
 function fetchOpts(): RequestInit {
   return {
     credentials: 'include',
@@ -43,6 +49,7 @@ function fetchOpts(): RequestInit {
   }
 }
 
+/** Authenticate with username+password. Stores user in localStorage on success. */
 export async function login(username: string, password: string): Promise<string> {
   const res = await fetch(`${API_BASE}/api/auth/login`, {
     method: 'POST',
@@ -57,37 +64,43 @@ export async function login(username: string, password: string): Promise<string>
   }
 
   const data = await res.json()
-  localStorage.setItem('vpsik_user', data.username)
+  localStorage.setItem('workspace_user', data.username)
   return data.token
 }
 
+/** Check whether the current session is still valid. */
 export async function verify(): Promise<boolean> {
   const res = await fetch(`${API_BASE}/api/auth/verify`, fetchOpts())
   return res.ok
 }
 
+/** End the current session. */
 export async function logout(): Promise<void> {
   await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {})
-  localStorage.removeItem('vpsik_user')
+  localStorage.removeItem('workspace_user')
 }
 
+/** Read the stored username from localStorage (SSR-safe). */
 export function getUser(): string | null {
   if (typeof window === 'undefined') return null
-  return localStorage.getItem('vpsik_user')
+  return localStorage.getItem('workspace_user')
 }
 
+/** Fetch the health status of all services. */
 export async function getStatus(): Promise<StatusResponse> {
   const res = await fetch(`${API_BASE}/api/status`, fetchOpts())
   if (!res.ok) throw new Error('failed to fetch status')
   return res.json()
 }
 
+/** Fetch the list of Gitea repositories. */
 export async function getGiteaRepos(): Promise<GiteaRepo[]> {
   const res = await fetch(`${API_BASE}/api/gitea/repos`, fetchOpts())
   if (!res.ok) throw new Error('failed to fetch repos')
   return res.json()
 }
 
+/** A Coolify project. */
 export interface CoolifyProject {
   id: string
   uuid: string
@@ -95,12 +108,14 @@ export interface CoolifyProject {
   description: string
 }
 
+/** A Coolify environment within a project. */
 export interface CoolifyEnvironment {
   id: string
   name: string
   created_at: string
 }
 
+/** A Coolify application (deployed resource). */
 export interface CoolifyApplication {
   id: string
   name: string
@@ -113,24 +128,28 @@ export interface CoolifyApplication {
   updated_at: string
 }
 
+/** Fetch all Coolify projects. */
 export async function getCoolifyProjects(): Promise<CoolifyProject[]> {
   const res = await fetch(`${API_BASE}/api/coolify/projects`, fetchOpts())
   if (!res.ok) throw new Error('failed to fetch projects')
   return res.json()
 }
 
+/** Fetch environments for a given Coolify project UUID. */
 export async function getCoolifyEnvironments(projectUUID: string): Promise<CoolifyEnvironment[]> {
   const res = await fetch(`${API_BASE}/api/coolify/projects/${projectUUID}/environments`, fetchOpts())
   if (!res.ok) throw new Error('failed to fetch environments')
   return res.json()
 }
 
+/** Fetch applications for a specific project+environment combination. */
 export async function getCoolifyApplications(projectUUID: string, envName: string): Promise<CoolifyApplication[]> {
   const res = await fetch(`${API_BASE}/api/coolify/projects/${projectUUID}/environments/${envName}/applications`, fetchOpts())
   if (!res.ok) throw new Error('failed to fetch applications')
   return res.json()
 }
 
+/** Trigger a deployment for a Coolify resource. */
 export async function deployCoolifyResource(resourceUUID: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/coolify/deploy`, {
     method: 'POST',
@@ -140,6 +159,7 @@ export async function deployCoolifyResource(resourceUUID: string): Promise<void>
   if (!res.ok) throw new Error('deploy failed')
 }
 
+/** Restart a Coolify resource. */
 export async function restartCoolifyResource(resourceUUID: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/coolify/restart`, {
     method: 'POST',
@@ -149,6 +169,7 @@ export async function restartCoolifyResource(resourceUUID: string): Promise<void
   if (!res.ok) throw new Error('restart failed')
 }
 
+/** Fetch deployment logs for a specific Coolify deployment ID. */
 export async function getCoolifyDeploymentLogs(deploymentID: string): Promise<string> {
   const res = await fetch(`${API_BASE}/api/coolify/deployments/${deploymentID}/logs`, fetchOpts())
   if (!res.ok) throw new Error('failed to fetch logs')
@@ -158,6 +179,7 @@ export async function getCoolifyDeploymentLogs(deploymentID: string): Promise<st
 
 // ─── Ollama ──────────────────────────────────────────────────────
 
+/** Fetch all locally-available Ollama models. */
 export async function getOllamaModels(): Promise<OllamaModel[]> {
   const res = await fetch(`${API_BASE}/api/ollama/models`, fetchOpts())
   if (!res.ok) throw new Error('failed to fetch models')
@@ -268,8 +290,7 @@ export async function runOllamaTask(model: string, task: string, content: string
   return data.reply
 }
 
-// ─── OpenCode.ai ─────────────────────────────────────────────────
-
+/** Send a chat message to OpenCode.ai and return the AI response. */
 export async function openCodeChat(message: string, context?: string, repoPath?: string): Promise<string> {
   const res = await fetch(`${API_BASE}/api/opencode/chat`, {
     method: 'POST',
@@ -281,8 +302,7 @@ export async function openCodeChat(message: string, context?: string, repoPath?:
   return data.reply
 }
 
-// ─── Restic / Backup ─────────────────────────────────────────────
-
+/** A point-in-time backup snapshot created by restic. */
 export interface ResticSnapshot {
   id: string
   time: string
@@ -292,6 +312,7 @@ export interface ResticSnapshot {
   short_id: string
 }
 
+/** Statistics returned after a successful backup. */
 export interface ResticBackupStats {
   files_new: number
   files_changed: number
@@ -301,12 +322,14 @@ export interface ResticBackupStats {
   total_bytes: number
 }
 
+/** Fetch the list of all restic snapshots. */
 export async function getResticSnapshots(): Promise<ResticSnapshot[]> {
   const res = await fetch(`${API_BASE}/api/restic/snapshots`, fetchOpts())
   if (!res.ok) throw new Error('failed to fetch snapshots')
   return res.json()
 }
 
+/** Create a new restic backup for the given paths (optionally tagged). */
 export async function createResticBackup(paths: string[], tags?: string[]): Promise<ResticBackupStats> {
   const res = await fetch(`${API_BASE}/api/restic/backup`, {
     method: 'POST',
@@ -317,6 +340,7 @@ export async function createResticBackup(paths: string[], tags?: string[]): Prom
   return res.json()
 }
 
+/** Restore a specific snapshot to a target directory. */
 export async function restoreResticSnapshot(snapshotID: string, target: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/restic/restore`, {
     method: 'POST',
@@ -326,6 +350,7 @@ export async function restoreResticSnapshot(snapshotID: string, target: string):
   if (!res.ok) throw new Error('restore failed')
 }
 
+/** Prune old snapshots, keeping only the N most recent (optionally filtered by tag). */
 export async function forgetResticSnapshots(keepLast: number, tags?: string[]): Promise<void> {
   const res = await fetch(`${API_BASE}/api/restic/forget`, {
     method: 'POST',
@@ -335,11 +360,28 @@ export async function forgetResticSnapshots(keepLast: number, tags?: string[]): 
   if (!res.ok) throw new Error('forget failed')
 }
 
+/** Response from the version-update check endpoint. */
+export interface UpdateCheckResponse {
+  current_version: string
+  latest_version: string
+  update_available: boolean
+  release_url: string
+}
+
+/** Check whether a newer version of WorkSpace OS is available. */
+export async function checkUpdate(): Promise<UpdateCheckResponse> {
+  const res = await fetch(`${API_BASE}/api/update/check`, fetchOpts())
+  if (!res.ok) throw new Error('check update failed')
+  return res.json()
+}
+
+/** Run a restic repository integrity check. */
 export async function checkResticRepo(): Promise<void> {
   const res = await fetch(`${API_BASE}/api/restic/check`, fetchOpts())
   if (!res.ok) throw new Error('restic check failed')
 }
 
+/** Fetch aggregate restic repository statistics. */
 export async function getResticStats(): Promise<Record<string, unknown>> {
   const res = await fetch(`${API_BASE}/api/restic/stats`, fetchOpts())
   if (!res.ok) throw new Error('failed to fetch restic stats')

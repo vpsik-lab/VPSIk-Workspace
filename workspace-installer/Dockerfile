@@ -3,9 +3,9 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -o /vpsik .
+RUN CGO_ENABLED=0 go build -o /workspace .
 
 FROM alpine:3.19
 RUN apk add --no-cache ca-certificates restic docker-cli
-COPY --from=builder /vpsik /usr/local/bin/vpsik
-ENTRYPOINT ["vpsik"]
+COPY --from=builder /workspace /usr/local/bin/workspace
+ENTRYPOINT ["workspace"]
